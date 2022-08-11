@@ -26,6 +26,10 @@ class StatusUpdate():
 
 def run(config: Config):
 
+    assert os.path.isdir(config.data_dir), "Data dir is not a directory"
+    assert os.path.isdir(os.path.join(config.data_dir, "transects")) and os.path.isdir(os.path.join(config.data_dir, "results")), "Data dir must contain 'transect' and 'results' subdirectories. Please consult the manual for the correct directory structure."
+    assert len(glob.glob(os.path.join(config.data_dir, "transects", "*/"))), "The 'transect' subdirectory must contain at least one transect. Please consult the manual for the correct directory structure."
+
     yield
     dpt = DPT()
     yield
