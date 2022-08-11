@@ -1,6 +1,7 @@
 import sys
 import os
 import glob
+import platform
 import numpy as np
 from sklearn import linear_model
 from custom_types import RegressionMethod
@@ -147,3 +148,16 @@ def calibrate(x, y, method, n=2, poly_deg=5):
 
 def is_standalone():
     return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
+
+
+def get_onnxruntime_providers():
+    if platform.system() != "Darwin":
+        return [
+            # "TensorrtExecutionProvider",  # TODO: reenable?
+            "CUDAExecutionProvider",
+            "CPUExecutionProvider",
+        ]
+    else:
+        return [
+            "CPUExecutionProvider",
+        ]

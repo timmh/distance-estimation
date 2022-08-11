@@ -1,0 +1,92 @@
+name: Package Application with Pyinstaller
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: true
+        prerelease: false
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+  build_linux:
+    needs: release
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install requirements
+      run: sudo apt-get install libgirepository1.0-dev && pip install -r requirements.txt
+    - name: Download weights
+      run: ./weights/download.sh
+    - name: Run PyInstaller
+      run: pyinstaller main.spec
+    - name: Upload artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./dist/DistanceEstimation
+        asset_name: DistanceEstimation_linux_x64
+        asset_content_type: application/x-executable
+  build_macos:
+    needs: release
+    runs-on: macos-11
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install requirements
+      run: pip install -r requirements_macos.txt
+    - name: Download weights
+      run: ./weights/download.sh
+    - name: Run PyInstaller
+      run: pyinstaller main.spec && (cd dist && zip -r DistanceEstimation.zip DistanceEstimation.app)
+    - name: Upload artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./dist/DistanceEstimation.zip
+        asset_name: DistanceEstimation_mac_x64.zip
+        asset_content_type: application/zip
+  build_windows:
+    needs: release
+    runs-on: windows-2022
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install requirements
+      run: pip install -r requirements.txt
+    - name: Download weights
+      run: .\weights\download.ps1
+    - name: Run PyInstaller
+      run: pyinstaller main.spec
+    - name: Upload artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./dist/DistanceEstimation.exe
+        asset_name: DistanceEstimation_win_x64.exe
+        asset_content_type: application/vnd.microsoft.portable-executable

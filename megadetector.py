@@ -1,9 +1,10 @@
 import sys
 import os
+import logging
 import numpy as np
 import cv2
 import onnxruntime
-from utils import is_standalone
+from utils import get_onnxruntime_providers, is_standalone
 
 
 class MegaDetectorLabel:
@@ -22,14 +23,20 @@ class MegaDetector:
             with open(os.path.join("weights", weights_name), "rb") as f:
                 weight_bytes = f.read()
 
-        self.session = onnxruntime.InferenceSession(
-            weight_bytes,
-            providers=[
-                "TensorrtExecutionProvider",
-                "CUDAExecutionProvider",
-                "CPUExecutionProvider",
-            ],
-        )
+        providers = get_onnxruntime_providers()
+        try:
+            self.session = onnxruntime.InferenceSession(
+                weight_bytes,
+                providers=providers,
+            )
+        except Exception as e:
+            providers_str = ",".join(providers)
+            logging.warn(f"Failed to create onnxruntime inference session with providers '{providers_str}', trying 'CPUExecutionProvider'")
+            self.session = onnxruntime.InferenceSession(
+                weight_bytes,
+                providers=["CPUExecutionProvider"],
+            )
+
         self.meta = self.session.get_modelmeta().custom_metadata_map
         self.net_w, self.net_h = 640, 448
         # self.common_size = (640, 448)

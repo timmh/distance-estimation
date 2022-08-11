@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Haucke
+    given-names: Timm
+    orcid: https://orcid.org/0000-0003-1696-6937
+  - family-names: Kühl
+    given-names: Hjalmar
+  - family-names: Hoyer
+    given-names: Jacqueline
+  - family-names: Steinhage
+    given-names: Volker
+    orcid: https://orcid.org/0000-0002-3172-3645
+title: "Overcoming the distance estimation bottleneck in estimating animal abundance with camera traps"
+version: 2.0
+doi: 10.1016/j.ecoinf.2021.101536
+date-released: 2022-05-01

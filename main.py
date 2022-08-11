@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import platform
 import traceback
 import sys
 from collections import OrderedDict
@@ -7,6 +8,7 @@ import logging
 from decimal import Decimal
 from enum import Enum
 import os
+from copy import deepcopy
 from tqdm import tqdm
 import toga
 from run import run
@@ -25,7 +27,7 @@ def var_to_label(var: str):
 def build_config_inputs(config, container, on_config_change):
     inputs = []
     for var in dir(config):
-        if var.startswith("_"):
+        if var.startswith("_") or var == "data_dir":
             continue
         value = getattr(config, var)
         value_type = type(value)
@@ -60,8 +62,12 @@ def build_config_inputs(config, container, on_config_change):
 def build(app: toga.App):
     sleep_duration = 0.01
     executable_path = os.path.realpath(sys.executable) if is_standalone() else os.path.realpath(__file__)
-    config_path = os.path.join(os.path.dirname(executable_path), os.path.splitext(os.path.basename(executable_path))[0] + "_config.json")
-    log_path = os.path.join(os.path.dirname(executable_path), os.path.splitext(os.path.basename(executable_path))[0] + "_log.txt")
+    if platform.system() == "Darwin":
+        work_dir = os.path.expanduser("~")
+    else:
+        work_dir = os.path.dirname(executable_path)
+    config_path = os.path.join(work_dir, os.path.splitext(os.path.basename(executable_path))[0] + "_config.json")
+    log_path = os.path.join(work_dir, os.path.splitext(os.path.basename(executable_path))[0] + "_log.txt")
 
     logging.basicConfig(
         level=logging.INFO,
@@ -107,25 +113,30 @@ def build(app: toga.App):
     main_box = toga.Box()
     main_box.style.direction = "column"
 
+    config_box = toga.Box()
+    config_box.style.direction = "column"
+
     data_dir_box = toga.Box()
     data_dir_box.style.padding = 15
     data_dir_label = toga.TextInput(readonly=True, initial=config.data_dir)
     data_dir_label.style.flex = 1
     data_dir_label.style.padding_left = 15
 
-    def update_data_dir(_):
-        def on_result(_, data_dir):
-            if data_dir is not None:
-                data_dir_label.value = str(data_dir)
-                config.data_dir = str(data_dir)
-                persist_config(config, config_path)
-
-        app.main_window.select_folder_dialog("Select Data Directory", on_result=on_result)
+    async def update_data_dir(_):
+        data_dir = await app.main_window.select_folder_dialog(
+            "Select Data Directory",
+            # on_result=on_result,
+            initial_directory=os.path.realpath(config.data_dir) if os.path.isdir(config.data_dir) and config.data_dir != "" else None,
+        )
+        if data_dir is not None:
+            data_dir_label.value = str(data_dir)
+            config.data_dir = str(data_dir)
+            persist_config(config, config_path)
 
     update_data_dir_button = toga.Button("Select Data Directory", on_press=update_data_dir)
     data_dir_box.add(update_data_dir_button)
     data_dir_box.add(data_dir_label)
-    main_box.add(data_dir_box)
+    config_box.add(data_dir_box)
 
     def enable_inputs(inputs, enable):
         for input in inputs:
@@ -135,7 +146,12 @@ def build(app: toga.App):
         setattr(config, var, value)
         persist_config(config, config_path)
 
-    inputs = build_config_inputs(config, main_box, on_config_change) + [update_data_dir_button, data_dir_label]
+    inputs = build_config_inputs(config, config_box, on_config_change) + [update_data_dir_button, data_dir_label]
+
+    config_box.style.flex = 1
+    config_box_container = toga.ScrollContainer(content=config_box)
+    config_box_container.style.flex = 1
+    main_box.add(config_box_container)
 
     status_box = toga.Box()
     status_box.style.padding = 15
@@ -150,11 +166,11 @@ def build(app: toga.App):
                 if terminate_run:
                     break
                 if status_update is not None:
-                    progressbar.value = status_update.current_transect_idx / status_update.total_transects
+                    progressbar.value = int(progressbar.max * status_update.current_transect_idx / status_update.total_transects)
                     last_status_update = status_update
                 yield sleep_duration
             if not terminate_run:
-                progressbar.value = 1
+                progressbar.value = progressbar.max
         except Exception as e:
             exception_str = exception_to_str(e)
             logging.error(exception_str)
@@ -174,7 +190,7 @@ def build(app: toga.App):
         if run_button.label == "Start":
             run_button.label = "Stop"
             enable_inputs(inputs, False)
-            app.add_background_task(lambda _: run_wrapper(config))
+            app.add_background_task(lambda _: run_wrapper(deepcopy(config)))
         elif run_button.label == "Stop":
             terminate_run = True
             run_button.label = "Start"
@@ -186,7 +202,7 @@ def build(app: toga.App):
     progressbar_box.style.flex = 1
     progressbar_box.style.direction = "row"
     progressbar_box.style.alignment = "center"
-    progressbar = toga.ProgressBar()
+    progressbar = toga.ProgressBar(max=int(1e6))
     progressbar.style.flex = 1
     progressbar.style.padding_left = 15
     progressbar_box.add(progressbar)
@@ -203,32 +219,70 @@ def cli(args):
     args = {k: v for k, v in args.__dict__.items() if not k.startswith("_") and k != "cli"}
     config = Config(**args)
     last_total = None
+    last_idx = 0
     with tqdm() as progressbar:
         for status_update in run(config):
             if status_update is not None:
                 if last_total != status_update.total_transects:
                     last_total = status_update.total_transects
                     progressbar.reset(status_update.total_transects)
-                progressbar.update(status_update.current_transect_idx)
+                progressbar.update(status_update.current_transect_idx - last_idx)
+                last_idx = status_update.current_transect_idx
+        if last_total is not None:
+            progressbar.update(last_total - last_idx)
 
 
 def main():
+
+    try:
+        # Close the splash screen.
+        import pyi_splash
+        pyi_splash.close()
+    except ImportError:
+        # Otherwise do nothing.
+        pass
+
     argparser = ArgumentParser()
     argparser.add_argument("--cli", action="store_true", help="Enables CLI operation and disables GUI")
     default_config = Config()
     for var in dir(Config):
         value_type = type(getattr(default_config, var))
+        default_value = getattr(default_config, var)
         if var.startswith("_"):
             continue
         if issubclass(value_type, Enum):
-            argparser.add_argument(f"--{var}", type=value_type, default=getattr(default_config, var), choices=value_type)
+            argparser.add_argument(f"--{var}", type=value_type, default=default_value, choices=value_type)
+        elif value_type is bool:
+            if default_value is True:
+                argparser.add_argument(f"--no_{var}", dest=var, action="store_false")
+            else:
+                argparser.add_argument(f"--{var}", dest=var, action="store_true")
         else:
-            argparser.add_argument(f"--{var}", type=value_type, default=getattr(default_config, var))
+            argparser.add_argument(f"--{var}", type=value_type, default=default_value)
     args = argparser.parse_args()
     if args.cli:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.StreamHandler()
+            ]
+        )
         cli(args)
     else:
-        toga.App('Distance Estimation', 'xyz.haucke.distance_sampling', startup=build).main_loop()
+        if is_standalone():
+            icon = os.path.join(sys._MEIPASS, "assets", "icon.png")
+        else:
+            icon = os.path.join("assets", "icon.png")
+        toga.App(
+            "Distance Estimation",
+            "xyz.haucke.distance_estimation",
+            icon=icon,
+            home_page="https://timm.haucke.xyz/publications/distance-estimation-animal-abundance",
+            description="An application for estimating distances to animals in camera trap footage",
+            author="Timm Haucke",
+            startup=build,
+        ).main_loop()
 
 
 if __name__ == '__main__':

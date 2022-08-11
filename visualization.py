@@ -2,6 +2,7 @@ import os
 import multiprocessing
 from queue import Queue, Empty
 import atexit
+import platform
 import numpy as np
 
 
@@ -22,6 +23,11 @@ atexit.register(exit_handler)
 
 # prevents memory leaks by matplotlib
 def multiprocessing_decorator(func):
+
+    # TODO: multiprocessing does currently not work correctly on macOS and Windows
+    if platform.system() == "Darwin" or platform.system() == "Windows":
+        return func
+
     def wrapped_func(*args, **kwargs):
         if process_queue.full():
             oldest_process = process_queue.get()

@@ -1,3 +1,4 @@
+from typing import Optional
 from collections import OrderedDict
 from dataclasses import dataclass
 import os
@@ -19,9 +20,9 @@ class StatusUpdate():
     current_transect_id: str
     current_transect_idx: int
     total_transects: int
-    current_detection_id: str|None = None
-    current_detection_idx: int|None = None
-    total_detections: int|None = None
+    current_detection_id: Optional[str] = None
+    current_detection_idx: Optional[str] = None
+    total_detections: Optional[str] = None
 
 
 def run(config: Config):
@@ -49,7 +50,10 @@ def run(config: Config):
             exp = -1 if config.calibrate_metric else 1
             calibration_frames = {}
 
-            for calibration_frame_filename in multi_file_extension_glob(os.path.join(transect_dir, "calibration_frames_cropped", "*"), config.intensity_image_extensions):
+            for calibration_frame_filename in (
+                multi_file_extension_glob(os.path.join(transect_dir, "calibration_frames", "*"), config.intensity_image_extensions) +
+                multi_file_extension_glob(os.path.join(transect_dir, "calibration_frames_cropped", "*"), config.intensity_image_extensions)  # for backwards compability. use crop configuration instead
+            ):
                 yield
                 calibration_frame_id = os.path.splitext(
                     os.path.basename(calibration_frame_filename)
@@ -111,8 +115,9 @@ def run(config: Config):
             if config.make_figures:
                 visualize_farthest_calibration_frame(config.data_dir, transect_id, farthest_calibration_frame_disp, config.min_depth, config.max_depth)
 
-            detection_frame_filenames = multi_file_extension_glob(
-                os.path.join(transect_dir, "detection_frames_cropped", "*"), config.intensity_image_extensions
+            detection_frame_filenames = (
+                multi_file_extension_glob(os.path.join(transect_dir, "detection_frames", "*"), config.intensity_image_extensions) +
+                multi_file_extension_glob(os.path.join(transect_dir, "detection_frames_cropped", "*"), config.intensity_image_extensions)  # for backwards compability. use crop configuration instead
             )
             for detection_idx, detection_frame_filename in enumerate(detection_frame_filenames):
                     # load intensity image and run animal detection
