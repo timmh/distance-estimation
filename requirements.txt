@@ -5,3 +5,4 @@ opencv-python==4.5.4.60
 pyinstaller==5.3
 scikit-learn==1.1.1
 toga==0.3.0.dev35
+tqdm==4.64.0

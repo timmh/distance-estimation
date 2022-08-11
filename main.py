@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 import traceback
 import sys
 from collections import OrderedDict
@@ -6,6 +7,7 @@ import logging
 from decimal import Decimal
 from enum import Enum
 import os
+from tqdm import tqdm
 import toga
 from run import run
 from config import Config
@@ -197,9 +199,37 @@ def build(app: toga.App):
     return main_box
 
 
+def cli(args):
+    args = {k: v for k, v in args.__dict__.items() if not k.startswith("_") and k != "cli"}
+    config = Config(**args)
+    last_total = None
+    with tqdm() as progressbar:
+        for status_update in run(config):
+            if status_update is not None:
+                if last_total != status_update.total_transects:
+                    last_total = status_update.total_transects
+                    progressbar.reset(status_update.total_transects)
+                progressbar.update(status_update.current_transect_idx)
+
+
 def main():
-    return toga.App('Distance Estimation', 'xyz.haucke.distance_sampling', startup=build)
+    argparser = ArgumentParser()
+    argparser.add_argument("--cli", action="store_true", help="Enables CLI operation and disables GUI")
+    default_config = Config()
+    for var in dir(Config):
+        value_type = type(getattr(default_config, var))
+        if var.startswith("_"):
+            continue
+        if issubclass(value_type, Enum):
+            argparser.add_argument(f"--{var}", type=value_type, default=getattr(default_config, var), choices=value_type)
+        else:
+            argparser.add_argument(f"--{var}", type=value_type, default=getattr(default_config, var))
+    args = argparser.parse_args()
+    if args.cli:
+        cli(args)
+    else:
+        toga.App('Distance Estimation', 'xyz.haucke.distance_sampling', startup=build).main_loop()
 
 
 if __name__ == '__main__':
-    main().main_loop()
+    main()
