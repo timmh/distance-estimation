@@ -1,0 +1,5 @@
+__pycache__
+/build/
+/dist/
+/main_config.json
+/main_log.txt
