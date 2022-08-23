@@ -37,9 +37,6 @@ class MegaDetector:
                 providers=["CPUExecutionProvider"],
             )
 
-        self.meta = self.session.get_modelmeta().custom_metadata_map
-        self.net_w, self.net_h = 640, 448
-        # self.common_size = (640, 448)
         self.common_size = None
 
 
