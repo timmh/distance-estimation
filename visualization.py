@@ -65,15 +65,20 @@ def visualize_farthest_calibration_frame(data_dir, transect_id, farthest_calibra
 
 
 @multiprocessing_decorator
-def visualize_detection(data_dir, detection_id, detection_frame, calibrated_depth_midas, final_calibration_frame_calibrated_disparity, boxes, world_positions, sample_locations, draw_world_position, min_depth, max_depth):
+def visualize_detection(data_dir, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, world_positions, sample_locations, draw_world_position, min_depth, max_depth):
     import matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.patches
     matplotlib.use("pdf")  # required for PyInstaller detection
     scale = 2
-    fig, (ax1, ax2, ax3) = plt.subplots(
-        1, 3, figsize=(scale * 6.202, scale * 1.5)
-    )
+    if farthest_calibration_frame_disp is not None:
+        fig, (ax1, ax2, ax3) = plt.subplots(
+            1, 3, figsize=(scale * 6.202, scale * 1.5)
+        )
+    else:
+        fig, (ax1, ax2) = plt.subplots(
+            1, 2, figsize=(scale * 6.202, scale * 1.5)
+        )
     
     ax1.imshow(detection_frame[..., ::-1])
     for box, world_pos in zip(boxes, world_positions):
@@ -103,26 +108,27 @@ def visualize_detection(data_dir, detection_id, detection_frame, calibrated_dept
                 color="r",
                 marker="x",
             )
-    im = ax3.imshow(
-        np.clip(
-            final_calibration_frame_calibrated_disparity.data,
-            max_depth ** -1,
-            min_depth ** -1,
+    if farthest_calibration_frame_disp is not None:
+        im = ax3.imshow(
+            np.clip(
+                farthest_calibration_frame_disp.data,
+                max_depth ** -1,
+                min_depth ** -1,
+            )
+            ** -1,
+            vmin=min_depth,
+            vmax=max_depth,
+            cmap="turbo",
         )
-        ** -1,
-        vmin=min_depth,
-        vmax=max_depth,
-        cmap="turbo",
-    )
-    ax3.get_xaxis().set_visible(False)
-    ax3.get_yaxis().set_visible(False)
+        ax3.get_xaxis().set_visible(False)
+        ax3.get_yaxis().set_visible(False)
 
     fig.subplots_adjust(
         bottom=0.1, top=0.9, left=0.1, right=0.8, wspace=0.02, hspace=0.02
     )
     a = 0.50
     cbar_ax = fig.add_axes([0.83, (1 - a) / 2, 0.02, a])
-    cbar = fig.colorbar(im, cax=cbar_ax, ax=[ax2, ax3])
+    cbar = fig.colorbar(im, cax=cbar_ax, ax=[ax2, ax3] if farthest_calibration_frame_disp is not None else [ax2])
     cbar.set_label("Depth [m]")
 
     os.makedirs(os.path.join(data_dir, "results", "sampling"), exist_ok=True)

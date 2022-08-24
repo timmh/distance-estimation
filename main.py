@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 import platform
-import traceback
 import sys
 from collections import OrderedDict
 import json
@@ -13,11 +12,7 @@ from tqdm import tqdm
 import toga
 from run import run
 from config import Config
-from utils import is_standalone
-
-
-def exception_to_str(e: Exception):
-    return "".join(traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))
+from utils import is_standalone, exception_to_str
 
 
 def var_to_label(var: str):
@@ -31,7 +26,7 @@ def build_config_inputs(config, container, on_config_change):
             continue
         value = getattr(config, var)
         value_type = type(value)
-        
+
         if value_type is float:
             input = toga.NumberInput(default=value, step=Decimal("0.01"), on_change=lambda input, var=var: on_config_change(var, float(input.value)))
         elif value_type is int:

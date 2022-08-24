@@ -2,6 +2,7 @@ import sys
 import os
 import glob
 import platform
+import traceback
 import numpy as np
 from sklearn import linear_model
 from custom_types import RegressionMethod
@@ -70,6 +71,7 @@ def get_calibration_frame_dist(transect_dir, calibration_frame_id):
 def calibrate(x, y, method, n=2, poly_deg=5):
 
     assert n in [1, 2]
+    assert len(x) >= 2 and len(y) >= 2 and len(x) == len(y), f"inconsistent sample length in calibration: len(x)={len(x)}, len(y)={len(y)}"
 
     x_mask = x.mask if hasattr(x, "mask") else np.zeros_like(x, dtype=bool)
     y_mask = y.mask if hasattr(y, "mask") else np.zeros_like(y, dtype=bool)
@@ -161,3 +163,7 @@ def get_onnxruntime_providers():
         return [
             "CPUExecutionProvider",
         ]
+
+
+def exception_to_str(e: Exception):
+    return "".join(traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))
