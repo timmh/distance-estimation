@@ -3,6 +3,7 @@ import os
 import glob
 import platform
 import traceback
+import cv2
 import numpy as np
 from sklearn import linear_model
 from custom_types import RegressionMethod
@@ -40,6 +41,13 @@ def crop(img, crop_top, crop_bottom, crop_left, crop_right):
     cl = crop_left
     cr = -crop_right if crop_right > 0 else img.shape[1]
     return img[ct:cb, cl:cr]
+
+
+def resize(img, target_size):
+    """Resize img to target_size if img is not already at target_size"""
+    if img.shape[0:2] != target_size[0:2]:
+        img = cv2.resize(img, (target_size[1], target_size[0]), cv2.INTER_LINEAR)
+    return img
 
 
 def get_calibration_frame_dist(transect_dir, calibration_frame_id):

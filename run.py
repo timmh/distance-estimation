@@ -12,7 +12,7 @@ from config import Config
 from dpt import DPT
 from megadetector import MegaDetector, MegaDetectorLabel
 from custom_types import DetectionSamplingMethod, MultipleAnimalReduction, SampleFrom
-from utils import calibrate, crop, exception_to_str, get_calibration_frame_dist, get_extension_agnostic_path, multi_file_extension_glob
+from utils import calibrate, crop, resize, exception_to_str, get_calibration_frame_dist, get_extension_agnostic_path, multi_file_extension_glob
 from visualization import visualize_detection, visualize_farthest_calibration_frame
 
 
@@ -98,6 +98,7 @@ def run(config: Config):
                 x,y  = [], []
                 for dist, disp in calibration_frames.items():
                     yield
+                    disp = resize(disp, farthest_calibration_frame_disp.shape)
                     disp_calibrated = calibrate(
                         disp ** exp,
                         farthest_calibration_frame_disp ** exp,
@@ -153,8 +154,17 @@ def run(config: Config):
 
                 yield
                 
-                # load intensity image and run animal detection
+                # load intensity image
                 img = cv2.imread(detection_frame_filename)
+
+                # crop and resize intensity image to have the same size as the reference images
+                img = crop(
+                    img,
+                    config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
+                )
+                img = resize(img, farthest_calibration_frame_disp.shape)
+
+                # run animal detection
                 scores, labels, boxes = megadetector(img)
 
                 yield
