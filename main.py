@@ -10,7 +10,7 @@ import os
 from copy import deepcopy
 from tqdm import tqdm
 import toga
-from run import run
+
 from config import Config
 from utils import is_standalone, exception_to_str
 
@@ -157,6 +157,7 @@ def build(app: toga.App):
     terminate_run = False
     last_status_update = None
     def run_wrapper(*args, **kwargs):
+        from run import run
         nonlocal terminate_run, last_status_update
         try:
             yield sleep_duration
@@ -214,6 +215,7 @@ def build(app: toga.App):
 
 
 def cli(args):
+    from run import run
     args = {k: v for k, v in args.__dict__.items() if not k.startswith("_") and k != "cli"}
     config = Config(**args)
     last_total = None
