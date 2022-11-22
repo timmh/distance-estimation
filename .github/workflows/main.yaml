@@ -57,16 +57,18 @@ jobs:
     - name: Download weights
       run: ./weights/download.sh
     - name: Run PyInstaller
-      run: pyinstaller main.spec && (cd dist && zip -r DistanceEstimation.zip DistanceEstimation.app)
+      run: pyinstaller main.spec
+    - name: Package as DMG file
+      run: dmgbuild -s dmgbuild_settings.py DistanceEstimation dist/DistanceEstimation.dmg
     - name: Upload artifacts
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ github.token }}
       with:
         upload_url: ${{ needs.release.outputs.upload_url }}
-        asset_path: ./dist/DistanceEstimation.zip
-        asset_name: DistanceEstimation_mac_x64.zip
-        asset_content_type: application/zip
+        asset_path: ./dist/DistanceEstimation.dmg
+        asset_name: DistanceEstimation_mac_x64.dmg
+        asset_content_type: application/octet-stream
   build_windows:
     needs: release
     runs-on: windows-2022

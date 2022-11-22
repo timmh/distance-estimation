@@ -16,7 +16,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[(os.path.join(onnxruntime_capi_path, '*onnxruntime*'), os.path.join('onnxruntime', 'capi'))] + platform_binaries,
-    datas=[('weights/*', 'weights'), ('assets/*', 'assets')],
+    datas=[('weights/*.onnx', 'weights'), ('assets/*.png', 'assets')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -68,10 +68,9 @@ else:
     exe = EXE(
         pyz,
         a.scripts,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
         [],
+        exclude_binaries=True,
+        exclude_datas=True,
         name='DistanceEstimation',
         debug=False,
         bootloader_ignore_signals=False,
@@ -88,10 +87,20 @@ else:
         icon='assets/icon.ico',
     )
 
-if platform.system() == 'Darwin':
-    app = BUNDLE(
+    coll = COLLECT(
         exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        strip=False,
+        upx=False,
+        name='DistanceEstimation'
+    )
+
+    app = BUNDLE(
+        coll,
         name='DistanceEstimation.app',
         icon='assets/icon.png',
-        bundle_identifier='xyz.haucke.distance_estimation'
+        bundle_identifier='xyz.haucke.distance_estimation',
+        version=os.getenv('GITHUB_REF_NAME', 'v0.0.0')[1:]
     )
