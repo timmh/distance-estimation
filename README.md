@@ -6,7 +6,7 @@ This is an implementation of the methodology proposed in "Overcoming the distanc
 
 ## Usage
 
-Download the appropriate executable for your platform under [releases](https://github.com/timmh/distance-estimation/releases). Under Windows and Linux, you can directly run the downloaded file. Under macOS, you first need to install the application as usual by copying it into the `Applications` directory (you may need to follow [additional steps](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac) to open the app). Once running, you may select your input data and configuration. Please refer to the [Data Structure](#data-structure) section for details about the data directory.
+Download the appropriate executable for your platform under [releases](https://github.com/timmh/distance-estimation/releases). Under Windows and Linux, you can directly run the downloaded file. Under macOS, you first need to install the application as usual by copying it into the `Applications` directory (you need to run macOS 11 Big Sur or newer and follow [additional steps](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac) to open the app). Once running, you may select your input data and configuration. Please refer to the [Data Structure](#data-structure) section for details about the data directory.
 
 ## Command Line Usage
 
