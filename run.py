@@ -133,6 +133,18 @@ def run(config: Config):
                 detection_id = os.path.splitext(os.path.basename(detection_frame_filename))[0]
                 yield StatusUpdate(transect_id, transect_idx, len(transect_dirs), detection_id, detection_idx, len(detection_frame_filenames))
 
+                # load intensity image
+                img = cv2.imread(detection_frame_filename)
+
+                # crop and resize intensity image to have the same size as the reference images
+                img = crop(
+                    img,
+                    config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
+                )
+                img = resize(img, farthest_calibration_frame_disp.shape)
+
+                yield
+
                 # check if depth from stereo camera exists or calibration succeeded
                 precomputed_depth_filename = get_extension_agnostic_path(os.path.join(transect_dir, "detection_frames_depth", detection_id), config.depth_image_extensions)
                 if precomputed_depth_filename is None and farthest_calibration_frame_disp is None:
@@ -153,16 +165,6 @@ def run(config: Config):
                     depth = np.clip(disp, config.max_depth ** -1, config.min_depth ** -1) ** -1
 
                 yield
-                
-                # load intensity image
-                img = cv2.imread(detection_frame_filename)
-
-                # crop and resize intensity image to have the same size as the reference images
-                img = crop(
-                    img,
-                    config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
-                )
-                img = resize(img, farthest_calibration_frame_disp.shape)
 
                 # run animal detection
                 scores, labels, boxes = megadetector(img)
