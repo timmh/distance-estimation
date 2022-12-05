@@ -2,7 +2,6 @@ import os
 import multiprocessing
 from queue import Queue, Empty
 import atexit
-import platform
 import numpy as np
 
 
@@ -22,25 +21,28 @@ atexit.register(exit_handler)
 
 
 # prevents memory leaks by matplotlib
-def multiprocessing_decorator(func):
+def visualize_farthest_calibration_frame(*args, **kwargs):
+    if process_queue.full():
+        oldest_process = process_queue.get()
+        oldest_process.join()
 
-    # TODO: multiprocessing does currently not work correctly on macOS and Windows
-    if platform.system() == "Darwin" or platform.system() == "Windows":
-        return func
-
-    def wrapped_func(*args, **kwargs):
-        if process_queue.full():
-            oldest_process = process_queue.get()
-            oldest_process.join()
-
-        process = multiprocessing.Process(target=func, args=args, kwargs=kwargs)
-        process.start()
-        process_queue.put(process)
-    return wrapped_func
+    process = multiprocessing.Process(target=visualize_farthest_calibration_frame_impl, args=args, kwargs=kwargs)
+    process.start()
+    process_queue.put(process)
 
 
-@multiprocessing_decorator
-def visualize_farthest_calibration_frame(data_dir, transect_id, farthest_calibration_frame_disp, min_depth, max_depth):
+# prevents memory leaks by matplotlib
+def visualize_detection(*args, **kwargs):
+    if process_queue.full():
+        oldest_process = process_queue.get()
+        oldest_process.join()
+
+    process = multiprocessing.Process(target=visualize_detection_impl, args=args, kwargs=kwargs)
+    process.start()
+    process_queue.put(process)
+
+
+def visualize_farthest_calibration_frame_impl(data_dir, transect_id, farthest_calibration_frame_disp, min_depth, max_depth):
     import matplotlib
     import matplotlib.pyplot as plt
     matplotlib.use("pdf")  # required for PyInstaller detection
@@ -64,8 +66,7 @@ def visualize_farthest_calibration_frame(data_dir, transect_id, farthest_calibra
     )
 
 
-@multiprocessing_decorator
-def visualize_detection(data_dir, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, world_positions, sample_locations, draw_world_position, min_depth, max_depth):
+def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, world_positions, sample_locations, draw_world_position, min_depth, max_depth):
     import matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.patches

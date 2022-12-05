@@ -8,6 +8,7 @@ from decimal import Decimal
 from enum import Enum
 import os
 from copy import deepcopy
+import multiprocessing
 from tqdm import tqdm
 import toga
 
@@ -286,4 +287,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    multiprocessing.freeze_support()
+    if multiprocessing.parent_process() is None:
+        main()
