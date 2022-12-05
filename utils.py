@@ -169,6 +169,7 @@ def get_onnxruntime_providers():
         ]
     else:
         return [
+            "CoreMLExecutionProvider",
             "CPUExecutionProvider",
         ]
 
