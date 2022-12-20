@@ -3,6 +3,7 @@ import multiprocessing
 from queue import Queue, Empty
 import atexit
 import numpy as np
+import cv2
 
 
 process_queue_max_len = min(8, os.cpu_count())
@@ -66,7 +67,7 @@ def visualize_farthest_calibration_frame_impl(data_dir, transect_id, farthest_ca
     )
 
 
-def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, world_positions, sample_locations, draw_world_position, min_depth, max_depth):
+def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, masks, world_positions, sample_locations, draw_world_position, min_depth, max_depth):
     import matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.patches
@@ -82,7 +83,17 @@ def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated
         )
     
     ax1.imshow(detection_frame[..., ::-1])
-    for box, world_pos in zip(boxes, world_positions):
+    for box, mask, world_pos in zip(boxes, masks, world_positions):
+        if mask is not None:
+            mask = cv2.resize(mask, (int(box[2] - box[0]), int(box[3] - box[1])), interpolation=cv2.INTER_LINEAR)
+            mask_rgb = np.zeros((*detection_frame.shape[0:2], 4))
+            mask_rgb[
+                int(box[1]):int(box[1]) + mask.shape[0],
+                int(box[0]):int(box[0]) + mask.shape[1],
+                [0, 3],
+            ] = mask[..., None]
+            mask_rgb[..., 3] *= 0.25
+            ax1.imshow((mask_rgb * 255).astype(np.uint8))
         rect = matplotlib.patches.Rectangle(
             (box[0], box[1]),
             box[2] - box[0],

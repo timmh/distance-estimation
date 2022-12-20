@@ -16,7 +16,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[(os.path.join(onnxruntime_capi_path, '*onnxruntime*'), os.path.join('onnxruntime', 'capi'))] + platform_binaries,
-    datas=[('weights/*.onnx', 'weights'), ('assets/*.png', 'assets')],
+    datas=[('weights/*.onnx', 'weights'), ('weights/*.tflite', 'weights'), ('assets/*.png', 'assets')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

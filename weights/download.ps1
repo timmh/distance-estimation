@@ -1,2 +1,3 @@
 Invoke-WebRequest -Uri "https://github.com/timmh/DPT/releases/download/onnx_v0.1/dpt_hybrid-midas-6c3ec701.onnx" -OutFile "$PSScriptRoot\dpt_hybrid-midas-6c3ec701.onnx"
 Invoke-WebRequest -Uri "https://github.com/timmh/MegaDetectorLite/releases/download/v0.2/md_v5a.0.0.onnx" -OutFile "$PSScriptRoot\md_v5a.0.0.onnx"
+Invoke-WebRequest -Uri "https://github.com/timmh/DeepMacLite/releases/download/v0.1/deepmac_1024x1024_coco17.tflite" -OutFile "$PSScriptRoot\deepmac_1024x1024_coco17.tflite"

@@ -54,7 +54,7 @@ issn = {1574-9541},
 url = {https://www.sciencedirect.com/science/article/pii/S1574954121003277}
 }
 ```
-Furthermore, as this software is based on [MegaDetector 5.0](https://github.com/microsoft/CameraTraps/releases/tag/v5.0) and [Dense Prediction Transformers](https://github.com/isl-org/DPT), please consider also citing:
+Furthermore, as parts of this software are based on [MegaDetector 5.0](https://github.com/microsoft/CameraTraps/releases/tag/v5.0), [Dense Prediction Transformers](https://github.com/isl-org/DPT), and [Deep-MAC](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/deepmac.md) please consider also citing:
 ```
 @article{megadetector,
   title={Efficient pipeline for camera trap image review},
@@ -68,5 +68,13 @@ Furthermore, as this software is based on [MegaDetector 5.0](https://github.com/
   booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
   pages={12179--12188},
   year={2021}
+}
+@misc{deepmac,
+  title={The surprising impact of mask-head architecture on novel class segmentation},
+  author={Vighnesh Birodkar and Zhichao Lu and Siyang Li and Vivek Rathod and Jonathan Huang},
+  year={2021},
+  eprint={2104.00613},
+  archivePrefix={arXiv},
+  primaryClass={cs.CV}
 }
 ```
