@@ -42,12 +42,12 @@ def run(config: Config):
         deepmac = DeepMac()
         yield
 
-    with open(os.path.join(config.data_dir, "results", "results.csv"), "w") as result_csv_file, open(os.path.join(config.data_dir, "results", "results.txt"), "w") as result_distance_file: 
+    with open(os.path.join(config.data_dir, "results", "results.csv"), "w", newline="") as result_csv_file, open(os.path.join(config.data_dir, "results", "results.txt"), "w") as result_distance_file: 
         head_row_csv = ["transect_id", "frame_id", "detection_idx", "detection_confidence", "depth", "world_x", "world_y", "world_z"]
         head_row_txt = ["Camera trap*Label", "Observation*Radial distance"]
         result_csv_writer = csv.writer(result_csv_file) 
         result_csv_writer.writerow(head_row_csv)
-        result_distance_file.write("\t".join(head_row_txt) + "\r\n")
+        result_distance_file.write("\t".join(head_row_txt) + os.linesep)
 
         transect_dirs = sorted(glob.glob(os.path.join(config.data_dir, "transects", "*/")))
         for transect_idx, transect_dir in enumerate(transect_dirs):
@@ -129,10 +129,10 @@ def run(config: Config):
             if config.make_figures and farthest_calibration_frame_disp is not None:
                 visualize_farthest_calibration_frame(config.data_dir, transect_id, farthest_calibration_frame_disp, config.min_depth, config.max_depth)
 
-            detection_frame_filenames = (
+            detection_frame_filenames = sorted(list(set(
                 multi_file_extension_glob(os.path.join(transect_dir, "detection_frames", "*"), config.intensity_image_extensions) +
                 multi_file_extension_glob(os.path.join(transect_dir, "detection_frames_cropped", "*"), config.intensity_image_extensions)  # for backwards compability. use crop configuration instead
-            )
+            )))
             for detection_idx, detection_frame_filename in enumerate(detection_frame_filenames):
                 detection_id = os.path.splitext(os.path.basename(detection_frame_filename))[0]
                 yield StatusUpdate(transect_id, transect_idx, len(transect_dirs), detection_id, detection_idx, len(detection_frame_filenames))
@@ -274,4 +274,4 @@ def run(config: Config):
                 for i, (score, sampled_depth, world_position) in enumerate(zip(scores, sampled_depths, world_positions)):
                     detection_i = i if config.multiple_animal_reduction != MultipleAnimalReduction.MEDIAN else -1
                     result_csv_writer.writerow([transect_id, detection_id, f"{detection_i:03d}", f"{score.item():.4f}", f"{sampled_depth.item():.4f}", f"{world_position[0].item():.4f}", f"{world_position[1].item():.4f}", f"{world_position[2].item():.4f}"])
-                    result_distance_file.write("\t".join([transect_id, f"{sampled_depth.item():.4f}"]) + "\r\n")
+                    result_distance_file.write("\t".join([transect_id, f"{sampled_depth.item():.4f}"]) + os.linesep)
