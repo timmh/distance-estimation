@@ -176,7 +176,10 @@ def run(config: Config):
                 yield
 
                 # discard all non-animal detections
-                correct_label_idx = np.nonzero(labels.flatten() == MegaDetectorLabel.ANIMAL)
+                if config.detect_humans:
+                    correct_label_idx = np.nonzero((labels.flatten() == MegaDetectorLabel.ANIMAL) | (labels.flatten() == MegaDetectorLabel.PERSON))
+                else:
+                    correct_label_idx = np.nonzero(labels.flatten() == MegaDetectorLabel.ANIMAL)
                 scores, labels, boxes = scores[correct_label_idx], labels[correct_label_idx], boxes[correct_label_idx]
 
                 # discard all detections with low confidence

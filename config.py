@@ -26,6 +26,7 @@ class Config:
 
     # detection parameters
     bbox_confidence_threshold: float = 0.2  # minimal confidence of detections
+    detect_humans: bool = False  # whether to detect humans and include their distance estimations in the output
 
     # visualization parameters
     make_figures: bool = True  # save figures in results directory
