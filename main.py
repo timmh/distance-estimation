@@ -33,7 +33,7 @@ def build_config_inputs(config, container, on_config_change):
         elif value_type is int:
             input = toga.NumberInput(default=value, step=1, on_change=lambda input, var=var: on_config_change(var, int(input.value)))
         elif value_type is bool:
-            input = toga.Switch("", is_on=value, on_toggle=lambda input, var=var: on_config_change(var, input.is_on))
+            input = toga.Switch("", value=value, on_change=lambda input, var=var: on_config_change(var, input.value))
         elif issubclass(value_type, Enum):
             input = toga.Selection(items=[e for e in dir(type(value)) if not e.startswith("_")], on_select=lambda input, var=var, default_type=value_type: on_config_change(var, getattr(default_type, input.value)))
             input.value = value.name

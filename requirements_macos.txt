@@ -4,6 +4,6 @@ onnxruntime==1.12.0
 opencv-python==4.5.4.60
 pyinstaller==5.6.2
 scikit-learn==1.1.1
-toga==0.3.0.dev39
+toga==0.3.1
 tqdm==4.64.0
 dmgbuild==1.6.0
