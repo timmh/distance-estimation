@@ -36,10 +36,14 @@ jobs:
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       with:
-        name: DistanceEstimation_linux_x64
-        path: ./dist/DistanceEstimation
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./dist/DistanceEstimation
+        asset_name: DistanceEstimation_linux_x64
+        asset_content_type: application/x-executable
   build_macos:
     needs: release
     runs-on: macos-11
@@ -57,10 +61,14 @@ jobs:
     - name: Package as DMG file
       run: dmgbuild -s dmgbuild_settings.py DistanceEstimation dist/DistanceEstimation.dmg
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       with:
-        name: DistanceEstimation_mac_x64.dmg
-        path: ./dist/DistanceEstimation.dmg
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./dist/DistanceEstimation.dmg
+        asset_name: DistanceEstimation_mac_x64.dmg
+        asset_content_type: application/octet-stream
   build_windows:
     needs: release
     runs-on: windows-2022
@@ -76,7 +84,11 @@ jobs:
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       with:
-        name: DistanceEstimation_win_x64.exe
-        path: ./dist/DistanceEstimation.exe
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./dist/DistanceEstimation.exe
+        asset_name: DistanceEstimation_win_x64.exe
+        asset_content_type: application/vnd.microsoft.portable-executable
