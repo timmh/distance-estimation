@@ -83,15 +83,11 @@ def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated
         )
     
     ax1.imshow(detection_frame[..., ::-1])
+    ax1.set_title("Observation")
     for box, mask, world_pos in zip(boxes, masks, world_positions):
         if mask is not None:
-            mask = cv2.resize(mask, (int(box[2] - box[0]), int(box[3] - box[1])), interpolation=cv2.INTER_LINEAR)
             mask_rgb = np.zeros((*detection_frame.shape[0:2], 4))
-            mask_rgb[
-                int(box[1]):int(box[1]) + mask.shape[0],
-                int(box[0]):int(box[0]) + mask.shape[1],
-                [0, 3],
-            ] = mask[..., None]
+            mask_rgb[:, :, [0, 3]] = mask[..., None]
             mask_rgb[..., 3] *= 0.25
             ax1.imshow((mask_rgb * 255).astype(np.uint8))
         rect = matplotlib.patches.Rectangle(
@@ -109,6 +105,7 @@ def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated
     ax1.get_xaxis().set_visible(False)
     ax1.get_yaxis().set_visible(False)
     im = ax2.imshow(calibrated_depth_midas, vmin=min_depth, vmax=max_depth, cmap="turbo")
+    ax2.set_title("Depth")
     ax2.get_xaxis().set_visible(False)
     ax2.get_yaxis().set_visible(False)
     sample_locations = np.array(sample_locations)
@@ -132,6 +129,7 @@ def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated
             vmax=max_depth,
             cmap="turbo",
         )
+        ax3.set_title("Reference Depth")
         ax3.get_xaxis().set_visible(False)
         ax3.get_yaxis().set_visible(False)
 
@@ -139,7 +137,7 @@ def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated
         bottom=0.1, top=0.9, left=0.1, right=0.8, wspace=0.02, hspace=0.02
     )
     a = 0.50
-    cbar_ax = fig.add_axes([0.83, (1 - a) / 2, 0.02, a])
+    cbar_ax = fig.add_axes([0.805, (1 - a) / 2, 0.02, a])
     cbar = fig.colorbar(im, cax=cbar_ax, ax=[ax2, ax3] if farthest_calibration_frame_disp is not None else [ax2])
     cbar.set_label("Depth [m]")
 

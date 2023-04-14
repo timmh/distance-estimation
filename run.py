@@ -11,7 +11,7 @@ import cv2
 from config import Config
 from dpt import DPT
 from megadetector import MegaDetector, MegaDetectorLabel
-from deepmac import DeepMac
+from sam import SAM
 from custom_types import DetectionSamplingMethod, MultipleAnimalReduction, SampleFrom
 from utils import calibrate, crop, resize, exception_to_str, get_calibration_frame_dist, get_extension_agnostic_path, multi_file_extension_glob
 from visualization import visualize_detection, visualize_farthest_calibration_frame
@@ -38,8 +38,8 @@ def run(config: Config):
     yield
     megadetector = MegaDetector()
     yield
-    if config.detection_sampling_method == DetectionSamplingMethod.DEEPMAC:
-        deepmac = DeepMac()
+    if config.detection_sampling_method == DetectionSamplingMethod.SAM:
+        sam = SAM()
         yield
 
     with open(os.path.join(config.data_dir, "results", "results.csv"), "w", newline="") as result_csv_file, open(os.path.join(config.data_dir, "results", "results.txt"), "w") as result_distance_file: 
@@ -191,9 +191,9 @@ def run(config: Config):
                 centerness_idx = np.argsort(centerness)
                 scores, labels, boxes = scores[centerness_idx], labels[centerness_idx], boxes[centerness_idx]
 
-                if config.detection_sampling_method == DetectionSamplingMethod.DEEPMAC:
-                    # compute DeepMAC masks
-                    masks = deepmac(img, boxes)
+                if config.detection_sampling_method == DetectionSamplingMethod.SAM:
+                    # compute SAM masks
+                    masks = sam(img, boxes)
 
                     yield
                 else:
@@ -225,13 +225,13 @@ def run(config: Config):
                             round(sample_location[1][0] + box[0]),
                         )
                         sample_locations += [sample_location]
-                    elif config.detection_sampling_method == DetectionSamplingMethod.DEEPMAC:
+                    elif config.detection_sampling_method == DetectionSamplingMethod.SAM:
                         ymin, ymax = max(0, min(depth.shape[0] - 2, round(box[1]))), max(0, min(depth.shape[0] - 1, round(box[3])))
                         xmin, xmax = max(0, min(depth.shape[1] - 2, round(box[0]))), max(0, min(depth.shape[1] - 1, round(box[2])))
                         depth_cropped = depth[ymin:ymax, xmin:xmax]
-                        mask_resized = cv2.resize(mask, (xmax - xmin, ymax - ymin), interpolation=cv2.INTER_LINEAR)
-                        if np.sum(mask_resized >= 0.5) > 0:
-                            sampled_depths += [np.percentile(depth_cropped[mask_resized >= 0.5], 50, method="nearest")]
+                        mask_cropped = mask[ymin:ymax, xmin:xmax]
+                        if np.sum(mask_cropped) > 0:
+                            sampled_depths += [np.percentile(depth_cropped[mask_cropped], 50, method="nearest")]
                         else:
                             sampled_depths += [np.percentile(depth_cropped, config.bbox_sampling_percentile, method="nearest")]
                         sample_location = np.nonzero(depth_cropped == sampled_depths[-1])

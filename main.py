@@ -13,7 +13,7 @@ from tqdm import tqdm
 import toga
 
 from config import Config
-from utils import is_standalone, exception_to_str
+from utils import is_standalone, exception_to_str, EnumActionLowerCase
 
 
 def var_to_label(var: str):
@@ -252,7 +252,7 @@ def main():
         if var.startswith("_"):
             continue
         if issubclass(value_type, Enum):
-            argparser.add_argument(f"--{var}", type=value_type, default=default_value, choices=value_type)
+            argparser.add_argument(f"--{var}", type=value_type, default=default_value, action=EnumActionLowerCase)
         elif value_type is bool:
             if default_value is True:
                 argparser.add_argument(f"--no_{var}", dest=var, action="store_false")

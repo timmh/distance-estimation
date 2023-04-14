@@ -3,6 +3,8 @@ import os
 import glob
 import platform
 import traceback
+import argparse
+import enum
 import cv2
 import numpy as np
 from sklearn import linear_model
@@ -176,3 +178,51 @@ def get_onnxruntime_providers():
 
 def exception_to_str(e: Exception):
     return "".join(traceback.format_exception(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))
+
+
+# taken from https://github.com/python/cpython/issues/69247#issuecomment-1308082792
+class EnumActionLowerCase(argparse.Action):
+    """
+    Action to accept Enums by lowercase name and output an enum value.
+
+    >>> class Item(enum.Enum):
+    ...     Foo = 1
+    ...     Bar = 2
+    ...
+    >>> parser = argparse.ArgumentParser()
+    >>> parser.add_argument('item', type=Item, action=EnumActionLowerCase)
+    >>> args = parser.parse_args("--item foo".split())
+    >>> assert args.item == Item.Foo
+
+    Source: https://stackoverflow.com/a/60750535/79125
+    """
+
+    def __init__(self, **kwargs):
+        # Pop off the type value
+        enum_type = kwargs.pop("type", None)
+
+        # Ensure an Enum subclass is provided
+        if enum_type is None:
+            raise ValueError(
+                "type must be assigned an Enum when using EnumActionLowerCase"
+            )
+        if not issubclass(enum_type, enum.Enum):
+            raise TypeError("type must be an Enum when using EnumActionLowerCase")
+
+        # Generate choices from the Enum
+        lower_names = tuple(e.name.lower() for e in enum_type)
+        unique_names = set(lower_names)
+        if len(lower_names) > len(unique_names):
+            raise ValueError(
+                "enum names must be lowercase unique when using EnumActionLowerCase"
+            )
+        kwargs.setdefault("choices", lower_names)
+
+        super(EnumActionLowerCase, self).__init__(**kwargs)
+
+        self._enum = enum_type
+
+    def __call__(self, parser, namespace, value, option_string=None):
+        # Find the matching enum member
+        value = next(e for e in self._enum if e.name.lower() == value)
+        setattr(namespace, self.dest, value)
