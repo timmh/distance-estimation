@@ -230,14 +230,17 @@ def run(config: Config):
                         xmin, xmax = max(0, min(depth.shape[1] - 2, round(box[0]))), max(0, min(depth.shape[1] - 1, round(box[2])))
                         depth_cropped = depth[ymin:ymax, xmin:xmax]
                         mask_cropped = mask[ymin:ymax, xmin:xmax]
-                        if np.sum(mask_cropped) > 0:
-                            sampled_depths += [np.percentile(depth_cropped[mask_cropped], 50, method="nearest")]
-                        else:
-                            sampled_depths += [np.percentile(depth_cropped, config.bbox_sampling_percentile, method="nearest")]
-                        sample_location = np.nonzero(depth_cropped == sampled_depths[-1])
+                        mask_paddded = np.pad(mask_cropped, ((1, 1), (1, 1)))
+                        dist = cv2.distanceTransform((mask_paddded * 255).astype(np.uint8), cv2.DIST_L2, cv2.DIST_MASK_3)
+                        sample_location = np.unravel_index(np.argmax(dist, axis=None), dist.shape)
                         sample_location = (
-                            round(sample_location[0][0] + box[1]),
-                            round(sample_location[1][0] + box[0]),
+                            max(0, min(mask_cropped.shape[0], sample_location[0] - 1)),
+                            max(0, min(mask_cropped.shape[1], sample_location[1] - 1)),
+                        )
+                        sampled_depths += [depth_cropped[sample_location[0], sample_location[1]]]
+                        sample_location = (
+                            round(sample_location[0] + box[1]),
+                            round(sample_location[1] + box[0]),
                         )
                         sample_locations += [sample_location]
                     else:

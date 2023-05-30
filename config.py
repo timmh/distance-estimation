@@ -37,7 +37,7 @@ class Config:
     calibration_regression_method: RegressionMethod = RegressionMethod.RANSAC  # one of RANSAC|LEASTSQUARES|POLY|RANSAC_POLY
 
     # sampling_parameters
-    detection_sampling_method: DetectionSamplingMethod = DetectionSamplingMethod.BBOX_PERCENTILE  # one of BBOX_BOTTOM|BBOX_PERCENTILE
+    detection_sampling_method: DetectionSamplingMethod = DetectionSamplingMethod.BBOX_PERCENTILE  # one of BBOX_BOTTOM|BBOX_PERCENTILE|SAM
     multiple_animal_reduction: MultipleAnimalReduction = MultipleAnimalReduction.NONE  # one of NONE|MEDIAN|ONLY_CENTERMOST|
     sample_from: SampleFrom = SampleFrom.DETECTION  # one of REFERENCE|DETECTION
     bbox_sampling_percentile: int = 20  # percentile of depth values sampled from detected bounding boxes. Only used if detection_sampling_method is equal to DetectionSamplingMethod.BBOX_PERCENTILE.
