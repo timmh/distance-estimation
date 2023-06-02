@@ -29,6 +29,8 @@ class StatusUpdate():
 
 def run(config: Config):
 
+    eps = 1e-6
+
     assert os.path.isdir(config.data_dir), "Data dir is not a directory"
     assert os.path.isdir(os.path.join(config.data_dir, "transects")) and os.path.isdir(os.path.join(config.data_dir, "results")), "Data dir must contain 'transect' and 'results' subdirectories. Please consult the manual for the correct directory structure."
     assert len(glob.glob(os.path.join(config.data_dir, "transects", "*/"))), "The 'transect' subdirectory must contain at least one transect. Please consult the manual for the correct directory structure."
@@ -103,6 +105,8 @@ def run(config: Config):
                 for dist, disp in calibration_frames.items():
                     yield
                     disp = resize(disp, farthest_calibration_frame_disp.shape)
+                    if config.calibrate_metric:
+                        disp = np.clip(disp, eps, np.inf)
                     disp_calibrated = calibrate(
                         disp ** exp,
                         farthest_calibration_frame_disp ** exp,
@@ -161,7 +165,11 @@ def run(config: Config):
                 elif precomputed_depth_filename is None and farthest_calibration_frame_disp is not None:
                     if config.sample_from == SampleFrom.DETECTION:
                         disp = dpt(img)
-                        disp = calibrate(disp ** exp, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp) ** exp
+                        if config.calibrate_metric:
+                            disp = np.clip(disp, eps, np.inf)
+                        disp = calibrate(disp ** exp, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp)
+                        if config.calibrate_metric:
+                            disp = np.clip(disp, config.min_depth, config.max_depth) ** -1
                     elif config.sample_from == SampleFrom.REFERENCE:
                         disp = farthest_calibration_frame_disp
                     else:
