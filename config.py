@@ -30,6 +30,7 @@ class Config:
 
     # visualization parameters
     make_figures: bool = True  # save figures in results directory
+    draw_detection_ids: bool = False  # whether to annotate detection IDs over detected bounding boxes
     draw_world_position: bool = False  # whether to annotate estimated world position over detected bounding boxes
 
     # calibration parameters

@@ -67,7 +67,7 @@ def visualize_farthest_calibration_frame_impl(data_dir, transect_id, farthest_ca
     )
 
 
-def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, masks, world_positions, sample_locations, draw_world_position, min_depth, max_depth):
+def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, masks, world_positions, sample_locations, draw_detection_ids, draw_world_position, min_depth, max_depth):
     import matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.patches
@@ -84,7 +84,7 @@ def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated
     
     ax1.imshow(detection_frame[..., ::-1])
     ax1.set_title("Observation")
-    for box, mask, world_pos in zip(boxes, masks, world_positions):
+    for i, (box, mask, world_pos) in enumerate(zip(boxes, masks, world_positions)):
         if mask is not None:
             mask_rgb = np.zeros((*detection_frame.shape[0:2], 4))
             mask_rgb[:, :, [0, 3]] = mask[..., None]
@@ -99,9 +99,13 @@ def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated
             facecolor="none",
         )
         ax1.add_patch(rect)
+        label = ""
+        if draw_detection_ids:
+            label += f"#{i:03d}"
         if draw_world_position:
-            rx, ry = rect.get_xy()
-            ax1.annotate(",".join([f"{e:.2f}m" for e in world_pos]), (rx, ry - 5), color="red", fontsize=6)
+            label += "@" + ",".join([f"{e:.2f}m" for e in world_pos])
+        rx, ry = rect.get_xy()
+        ax1.annotate(label, (rx, ry - 5), color="red", fontsize=6)
     ax1.get_xaxis().set_visible(False)
     ax1.get_yaxis().set_visible(False)
     im = ax2.imshow(calibrated_depth_midas, vmin=min_depth, vmax=max_depth, cmap="turbo")

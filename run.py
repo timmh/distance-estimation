@@ -281,7 +281,7 @@ def run(config: Config):
 
 
                 if config.make_figures:
-                    visualize_detection(config.data_dir, detection_id, img, depth, farthest_calibration_frame_disp, boxes, masks, world_positions, sample_locations, config.draw_world_position, config.min_depth, config.max_depth)
+                    visualize_detection(config.data_dir, detection_id, img, depth, farthest_calibration_frame_disp, boxes, masks, world_positions, sample_locations, config.draw_detection_ids, config.draw_world_position, config.min_depth, config.max_depth)
 
                 yield
 
