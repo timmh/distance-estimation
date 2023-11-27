@@ -44,7 +44,7 @@ jobs:
         asset_path: ./dist/DistanceEstimation
         asset_name: DistanceEstimation_linux_x64
         asset_content_type: application/x-executable
-  build_macos:
+  build_macos_x64:
     needs: release
     runs-on: macos-11
     steps:
@@ -68,6 +68,31 @@ jobs:
         upload_url: ${{ needs.release.outputs.upload_url }}
         asset_path: ./dist/DistanceEstimation.dmg
         asset_name: DistanceEstimation_mac_x64.dmg
+        asset_content_type: application/octet-stream
+  build_macos_arm64:
+    needs: release
+    runs-on: macos-13-large
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install requirements
+      run: pip install -r requirements_macos.txt
+    - name: Download weights
+      run: ./weights/download.sh
+    - name: Run PyInstaller
+      run: pyinstaller main.spec
+    - name: Package as DMG file
+      run: dmgbuild -s dmgbuild_settings.py DistanceEstimation dist/DistanceEstimation.dmg
+    - name: Upload artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./dist/DistanceEstimation.dmg
+        asset_name: DistanceEstimation_mac_arm64.dmg
         asset_content_type: application/octet-stream
   build_windows:
     needs: release
