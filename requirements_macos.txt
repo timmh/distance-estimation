@@ -6,4 +6,5 @@ pyinstaller==5.6.2
 scikit-learn==1.1.1
 toga==0.4.0
 tqdm==4.64.0
+platformdirs==4.2.0
 dmgbuild==1.6.0

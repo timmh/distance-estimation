@@ -8,7 +8,11 @@ import enum
 import cv2
 import numpy as np
 from sklearn import linear_model
+from platformdirs import PlatformDirs
 from custom_types import RegressionMethod
+
+
+dirs = PlatformDirs("DistanceEstimation", "timmh")
 
 
 def multi_file_extension_glob(base: str, extensions: str, recursive=False):

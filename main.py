@@ -60,13 +60,10 @@ def build_config_inputs(config, container, on_config_change):
 
 def build(app: toga.App):
     sleep_duration = 0.01
-    executable_path = os.path.realpath(sys.executable) if is_standalone() else os.path.realpath(__file__)
-    if platform.system() == "Darwin":
-        work_dir = os.path.expanduser("~")
-    else:
-        work_dir = os.path.dirname(executable_path)
-    config_path = os.path.join(work_dir, os.path.splitext(os.path.basename(executable_path))[0] + "_config.json")
-    log_path = os.path.join(work_dir, os.path.splitext(os.path.basename(executable_path))[0] + "_log.txt")
+    os.makedirs(dirs.user_config_dir, exist_ok=True)
+    os.makedirs(dirs.user_log_dir, exist_ok=True)
+    config_path = os.path.join(dirs.user_config_dir, "config.json")
+    log_path = os.path.join(dirs.user_log_dir, "log.txt")
 
     logging.basicConfig(
         level=logging.INFO,
