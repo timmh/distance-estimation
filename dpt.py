@@ -6,30 +6,32 @@ import logging
 import numpy as np
 import cv2
 import onnxruntime
-from utils import get_onnxruntime_providers, is_standalone
+from utils import get_onnxruntime_providers, DownloadableWeights
 
 
-class DPT:
+class DPT(DownloadableWeights):
     def __init__(self):
-        weights_name = "dpt_hybrid-midas-6c3ec701.onnx"
-        if is_standalone():
-            with open(os.path.join(sys._MEIPASS, "weights", weights_name), "rb") as f:
-                weight_bytes = f.read()
-        else:
-            with open(os.path.join("weights", weights_name), "rb") as f:
-                weight_bytes = f.read()
+        self._model_loaded = False
+
+    def _load_model(self):
+        if self._model_loaded:
+            return
+        self._model_loaded = True
+
+        weights_url = "https://github.com/timmh/DPT/releases/download/onnx_v0.1/dpt_hybrid-midas-6c3ec701.onnx"
+        weights_path = self.get_weights(weights_url)
 
         providers = get_onnxruntime_providers()
         try:
             self.session = onnxruntime.InferenceSession(
-                weight_bytes,
+                weights_path,
                 providers=providers,
             )
         except Exception as e:
             providers_str = ",".join(providers)
             logging.warn(f"Failed to create onnxruntime inference session with providers '{providers_str}', trying 'CPUExecutionProvider'")
             self.session = onnxruntime.InferenceSession(
-                weight_bytes,
+                weights_path,
                 providers=["CPUExecutionProvider"],
             )
 
@@ -41,6 +43,9 @@ class DPT:
         self.std = np.array(normalization["std"])
     
     def __call__(self, img):
+        # ensure model is loaded
+        self._load_model()
+
         # BGR to RGB
         img = img[..., ::-1]
 

@@ -5,6 +5,7 @@ import platform
 import traceback
 import argparse
 import enum
+import urllib.request
 import cv2
 import numpy as np
 from sklearn import linear_model
@@ -227,3 +228,20 @@ class EnumActionLowerCase(argparse.Action):
         # Find the matching enum member
         value = next(e for e in self._enum if e.name.lower() == value)
         setattr(namespace, self.dest, value)
+
+
+class DownloadableWeights:
+    def get_weights(self, weights_url):
+        download_dir = os.path.join(dirs.user_cache_dir, "weights")
+        filename = weights_url.split("/")[-1]
+        filepath = os.path.join(download_dir, filename)
+        if os.path.exists(filepath):
+            return filepath
+
+        try:
+            os.makedirs(download_dir, exist_ok=True)
+            urllib.request.urlretrieve(weights_url, filepath)
+            return filepath
+        except Exception as e:
+            os.unlink(filepath)
+            raise e

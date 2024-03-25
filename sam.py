@@ -5,39 +5,46 @@ import logging
 import numpy as np
 import cv2
 import onnxruntime
-from utils import get_onnxruntime_providers, is_standalone
+from utils import get_onnxruntime_providers, DownloadableWeights
 
 
-class SAM:
+class SAM(DownloadableWeights):
     def __init__(self):
+        self._model_loaded = False
+
+    def _load_model(self):
+        if self._model_loaded:
+            return
+        self._model_loaded = True
+
         for session_name in ["encoder", "decoder"]:
-            weights_name = f"sam_vit_b_01ec64_{session_name}.onnx"
-            if is_standalone():
-                with open(os.path.join(sys._MEIPASS, "weights", weights_name), "rb") as f:
-                    weight_bytes = f.read()
-            else:
-                with open(os.path.join("weights", weights_name), "rb") as f:
-                    weight_bytes = f.read()
+
+            weights_url = f"https://github.com/timmh/segment-anything/releases/download/v1.0.0/sam_vit_b_01ec64_{session_name}.onnx"
+            weights_path = self.get_weights(weights_url)
 
             providers = get_onnxruntime_providers()
             try:
                 session = onnxruntime.InferenceSession(
-                    weight_bytes,
+                    weights_path,
                     providers=providers,
                 )
-                setattr(self, f"{session_name}_session", session)
             except Exception as e:
                 providers_str = ",".join(providers)
                 logging.warn(f"Failed to create onnxruntime inference session with providers '{providers_str}', trying 'CPUExecutionProvider'")
-                self.session = onnxruntime.InferenceSession(
-                    weight_bytes,
+                session = onnxruntime.InferenceSession(
+                    weights_path,
                     providers=["CPUExecutionProvider"],
                 )
+            setattr(self, f"{session_name}_session", session)
+
         self.image_size = (1024, 1024)
         self.pixel_mean = np.array([123.675, 116.28, 103.53])
         self.pixel_std = np.array([58.395, 57.12, 57.375])
 
     def __call__(self, img, boxes):
+        # ensure model is loaded
+        self._load_model()
+
         img = img[..., ::-1]
         original_size = img.shape[0:2]
         img = cv2.copyMakeBorder(img, 0, max(0, img.shape[1] - img.shape[0]), 0, max(0, img.shape[0] - img.shape[1]), cv2.BORDER_CONSTANT)

@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-import platform
 import sys
 from collections import OrderedDict
 import json
@@ -13,7 +12,7 @@ from tqdm import tqdm
 import toga
 
 from config import Config
-from utils import is_standalone, exception_to_str, EnumActionLowerCase
+from utils import is_standalone, exception_to_str, EnumActionLowerCase, dirs
 
 
 def var_to_label(var: str):
