@@ -1,5 +1,7 @@
+
 import sys
 import os
+import json
 import logging
 import numpy as np
 import cv2
@@ -7,15 +9,9 @@ import onnxruntime
 from utils import get_onnxruntime_providers, is_standalone
 
 
-class MegaDetectorLabel:
-    ANIMAL = 0
-    PERSON = 1
-    VEHICLE = 2
-
-
-class MegaDetector:
+class DepthAnything:
     def __init__(self):
-        weights_name = "md_v5a.0.0.onnx"
+        weights_name = "depth_anything_metric_depth_outdoor.onnx"
         if is_standalone():
             with open(os.path.join(sys._MEIPASS, "weights", weights_name), "rb") as f:
                 weight_bytes = f.read()
@@ -23,7 +19,7 @@ class MegaDetector:
             with open(os.path.join("weights", weights_name), "rb") as f:
                 weight_bytes = f.read()
 
-        providers = get_onnxruntime_providers(enable_coreml=False)
+        providers = get_onnxruntime_providers()
         try:
             self.session = onnxruntime.InferenceSession(
                 weight_bytes,
@@ -37,9 +33,13 @@ class MegaDetector:
                 providers=["CPUExecutionProvider"],
             )
 
-        self.common_size = None
-
-
+        metadata = self.session.get_modelmeta().custom_metadata_map
+        self.net_w, self.net_h = json.loads(metadata["ImageSize"])
+        normalization = json.loads(metadata["Normalization"])
+        self.prediction_factor = float(metadata["PredictionFactor"])
+        self.mean = np.array(normalization["mean"])
+        self.std = np.array(normalization["std"])
+    
     def __call__(self, img):
         # BGR to RGB
         img = img[..., ::-1]
@@ -48,10 +48,10 @@ class MegaDetector:
         img = img / 255.
 
         # resize
-        if self.common_size is not None:
-            img_input = cv2.resize(img, self.common_size, cv2.INTER_AREA)
-        else:
-            img_input = img
+        img_input = cv2.resize(img, (self.net_h, self.net_w), cv2.INTER_AREA)
+
+        # normalize
+        img_input = (img_input - self.mean) / self.std
 
         # transpose from HWC to CHW
         img_input = img_input.transpose(2, 0, 1)
@@ -60,16 +60,8 @@ class MegaDetector:
         img_input = img_input[None, ...]
 
         # compute
-        scores, labels, boxes = self.session.run(
-            ["scores", "labels", "boxes"],
-            {self.session.get_inputs()[0].name: img_input.astype(np.float32)
-        })
+        prediction = self.session.run(["output"], {"input": img_input.astype(np.float32)})[0][0][0]
+        prediction = cv2.resize(prediction, (img.shape[1], img.shape[0]), cv2.INTER_CUBIC)
+        prediction *= self.prediction_factor
 
-        if self.common_size is not None:
-            for box in boxes:
-                box[0] = box[0] * img.shape[1] / self.common_size[0]
-                box[1] = box[1] * img.shape[0] / self.common_size[1]
-                box[2] = box[2] * img.shape[1] / self.common_size[0]
-                box[3] = box[3] * img.shape[0] / self.common_size[1]
-
-        return scores, labels, boxes
+        return prediction

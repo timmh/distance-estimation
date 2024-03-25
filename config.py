@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List
-from custom_types import DetectionSamplingMethod, SampleFrom, MultipleAnimalReduction, RegressionMethod
+from custom_types import DetectionSamplingMethod, SampleFrom, MultipleAnimalReduction, RegressionMethod, DepthEstimationModel
 
 
 @dataclass
@@ -27,6 +27,9 @@ class Config:
     # detection parameters
     bbox_confidence_threshold: float = 0.2  # minimal confidence of detections
     detect_humans: bool = False  # whether to detect humans and include their distance estimations in the output
+
+    # depth estimation parameters
+    depth_estimation_model: DepthEstimationModel = DepthEstimationModel.DPT  # one of DPT|DEPTH_ANYTHING
 
     # visualization parameters
     make_figures: bool = True  # save figures in results directory

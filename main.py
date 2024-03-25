@@ -180,20 +180,20 @@ def build(app: toga.App):
                 status_str += f" and detection '{last_status_update.current_detection_id}'" if last_status_update.current_detection_id is not None else ""
             app.main_window.info_dialog("Error", f"An error occured{status_str}: {str(e)}\nDetails:\n{exception_str}")
         finally:
-            run_button.label = "Start"
+            run_button.text = "Start"
             enable_inputs(inputs, True)
             terminate_run = False
             last_status_update = None
 
     def on_run(_):
         nonlocal terminate_run
-        if run_button.label == "Start":
-            run_button.label = "Stop"
+        if run_button.text == "Start":
+            run_button.text = "Stop"
             enable_inputs(inputs, False)
             app.add_background_task(lambda _: run_wrapper(deepcopy(config)))
-        elif run_button.label == "Stop":
+        elif run_button.text == "Stop":
             terminate_run = True
-            run_button.label = "Start"
+            run_button.text = "Start"
             progressbar.value = 0
             enable_inputs(inputs, True)
 

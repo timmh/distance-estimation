@@ -162,7 +162,7 @@ def is_standalone():
     return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
 
 
-def get_onnxruntime_providers():
+def get_onnxruntime_providers(enable_coreml=True):
     if platform.system() != "Darwin":
         return [
             # "TensorrtExecutionProvider",  # TODO: reenable?
@@ -170,10 +170,7 @@ def get_onnxruntime_providers():
             "CPUExecutionProvider",
         ]
     else:
-        return [
-            "CoreMLExecutionProvider",
-            "CPUExecutionProvider",
-        ]
+        return (["CoreMLExecutionProvider"] if enable_coreml else []) + ["CPUExecutionProvider"]
 
 
 def exception_to_str(e: Exception):

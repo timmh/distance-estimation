@@ -10,9 +10,10 @@ import numpy as np
 import cv2
 from config import Config
 from dpt import DPT
+from depth_anything import DepthAnything
 from megadetector import MegaDetector, MegaDetectorLabel
 from sam import SAM
-from custom_types import DetectionSamplingMethod, MultipleAnimalReduction, SampleFrom
+from custom_types import DetectionSamplingMethod, MultipleAnimalReduction, SampleFrom, DepthEstimationModel
 from utils import calibrate, crop, resize, exception_to_str, get_calibration_frame_dist, get_extension_agnostic_path, multi_file_extension_glob
 from visualization import visualize_detection, visualize_farthest_calibration_frame
 
@@ -36,7 +37,7 @@ def run(config: Config):
     assert len(glob.glob(os.path.join(config.data_dir, "transects", "*/"))), "The 'transect' subdirectory must contain at least one transect. Please consult the manual for the correct directory structure."
 
     yield
-    dpt = DPT()
+    depth_estimation_model = DPT() if config.depth_estimation_model == DepthEstimationModel.DPT else DepthAnything()
     yield
     megadetector = MegaDetector()
     yield
@@ -59,79 +60,81 @@ def run(config: Config):
 
             exp = -1 if config.calibrate_metric else 1
             calibration_frames = {}
+            farthest_calibration_frame_disp = None
 
-            for calibration_frame_filename in (
-                multi_file_extension_glob(os.path.join(transect_dir, "calibration_frames", "*"), config.intensity_image_extensions) +
-                multi_file_extension_glob(os.path.join(transect_dir, "calibration_frames_cropped", "*"), config.intensity_image_extensions)  # for backwards compability. use crop configuration instead
-            ):
-                yield
-                calibration_frame_id = os.path.splitext(
-                    os.path.basename(calibration_frame_filename)
-                )[0]
-                dist = get_calibration_frame_dist(transect_dir, calibration_frame_id)
-                img = crop(
-                    cv2.imread(calibration_frame_filename),
-                    config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
-                )
-                mask = crop(
-                    cv2.imread(
-                        get_extension_agnostic_path(
-                            os.path.join(
-                                transect_dir,
-                                "calibration_frames_masks",
-                                calibration_frame_id,
-                            ),
-                            config.intensity_image_extensions,
-                        ),
-                        cv2.IMREAD_GRAYSCALE,
-                    )
-                    > 127,
-                    config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
-                )
-                disp = dpt(img)
-                disp = np.ma.masked_where(mask, disp)
-                calibration_frames[dist] = disp
-
-            yield
-
-            # sort calibration frames
-            calibration_frames = OrderedDict(sorted(calibration_frames.items(), key=lambda kv: kv[0]))
-
-            # get disparity of the farthest calibration frame
-            farthest_calibration_frame_disp = list(calibration_frames.values())[-1] if len(calibration_frames) > 0 else None
-
-            try:
-                x,y  = [], []
-                for dist, disp in calibration_frames.items():
+            if config.depth_estimation_model != DepthEstimationModel.DEPTH_AHYTHING_METRIC:
+                for calibration_frame_filename in (
+                    multi_file_extension_glob(os.path.join(transect_dir, "calibration_frames", "*"), config.intensity_image_extensions) +
+                    multi_file_extension_glob(os.path.join(transect_dir, "calibration_frames_cropped", "*"), config.intensity_image_extensions)  # for backwards compability. use crop configuration instead
+                ):
                     yield
-                    disp = resize(disp, farthest_calibration_frame_disp.shape)
-                    if config.calibrate_metric:
-                        disp = np.clip(disp, eps, np.inf)
-                    disp_calibrated = calibrate(
-                        disp ** exp,
-                        farthest_calibration_frame_disp ** exp,
-                        config.calibration_regression_method,
-                    )(disp.data ** exp) ** exp
-                    disp_calibrated = np.ma.masked_where(disp.mask, disp_calibrated)
+                    calibration_frame_id = os.path.splitext(
+                        os.path.basename(calibration_frame_filename)
+                    )[0]
+                    dist = get_calibration_frame_dist(transect_dir, calibration_frame_id)
+                    img = crop(
+                        cv2.imread(calibration_frame_filename),
+                        config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
+                    )
+                    mask = crop(
+                        cv2.imread(
+                            get_extension_agnostic_path(
+                                os.path.join(
+                                    transect_dir,
+                                    "calibration_frames_masks",
+                                    calibration_frame_id,
+                                ),
+                                config.intensity_image_extensions,
+                            ),
+                            cv2.IMREAD_GRAYSCALE,
+                        )
+                        > 127,
+                        config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
+                    )
+                    disp = depth_estimation_model(img)
+                    disp = np.ma.masked_where(mask, disp)
+                    calibration_frames[dist] = disp
 
-                    x.append(np.median(disp_calibrated.data[disp_calibrated.mask]))
-                    y.append(dist ** -1)
+                yield
 
-                calibration = calibrate(np.array(x) ** exp, np.array(y) ** exp, config.calibration_regression_method)
-                farthest_calibration_frame_disp = np.ma.masked_where(
-                    farthest_calibration_frame_disp.mask,
-                    calibration(farthest_calibration_frame_disp.data ** exp) ** exp,
-                )
-            except Exception as e:
-                calibration = None
-                farthest_calibration_frame_disp = None
-                if not os.path.exists(os.path.join(transect_dir, "detection_frames_depth")):
-                    logging.warn(f"Failed calibrating transect '{transect_id}' due to exception: {exception_to_str(e)}. Skipping all distance estimations for observations in this transect.")
+                # sort calibration frames
+                calibration_frames = OrderedDict(sorted(calibration_frames.items(), key=lambda kv: kv[0]))
 
-            yield
+                # get disparity of the farthest calibration frame
+                farthest_calibration_frame_disp = list(calibration_frames.values())[-1] if len(calibration_frames) > 0 else None
 
-            if config.make_figures and farthest_calibration_frame_disp is not None:
-                visualize_farthest_calibration_frame(config.data_dir, transect_id, farthest_calibration_frame_disp, config.min_depth, config.max_depth)
+                try:
+                    x,y  = [], []
+                    for dist, disp in calibration_frames.items():
+                        yield
+                        disp = resize(disp, farthest_calibration_frame_disp.shape)
+                        if config.calibrate_metric:
+                            disp = np.clip(disp, eps, np.inf)
+                        disp_calibrated = calibrate(
+                            disp ** exp,
+                            farthest_calibration_frame_disp ** exp,
+                            config.calibration_regression_method,
+                        )(disp.data ** exp) ** exp
+                        disp_calibrated = np.ma.masked_where(disp.mask, disp_calibrated)
+
+                        x.append(np.median(disp_calibrated.data[disp_calibrated.mask]))
+                        y.append(dist ** -1)
+
+                    calibration = calibrate(np.array(x) ** exp, np.array(y) ** exp, config.calibration_regression_method)
+                    farthest_calibration_frame_disp = np.ma.masked_where(
+                        farthest_calibration_frame_disp.mask,
+                        calibration(farthest_calibration_frame_disp.data ** exp) ** exp,
+                    )
+                except Exception as e:
+                    calibration = None
+                    farthest_calibration_frame_disp = None
+                    if not os.path.exists(os.path.join(transect_dir, "detection_frames_depth")):
+                        logging.warn(f"Failed calibrating transect '{transect_id}' due to exception: {exception_to_str(e)}. Skipping all distance estimations for observations in this transect.")
+
+                yield
+
+                if config.make_figures and farthest_calibration_frame_disp is not None:
+                    visualize_farthest_calibration_frame(config.data_dir, transect_id, farthest_calibration_frame_disp, config.min_depth, config.max_depth)
 
             detection_frame_filenames = sorted(list(set(
                 multi_file_extension_glob(os.path.join(transect_dir, "detection_frames", "*"), config.intensity_image_extensions) +
@@ -149,32 +152,39 @@ def run(config: Config):
                     img,
                     config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
                 )
-                img = resize(img, farthest_calibration_frame_disp.shape)
+                if farthest_calibration_frame_disp is not None:
+                    img = resize(img, farthest_calibration_frame_disp.shape)
 
                 yield
 
-                # check if depth from stereo camera exists or calibration succeeded
-                precomputed_depth_filename = get_extension_agnostic_path(os.path.join(transect_dir, "detection_frames_depth", detection_id), config.depth_image_extensions)
-                if precomputed_depth_filename is None and farthest_calibration_frame_disp is None:
-                    logging.warn(f"Unable to perform distance estimation on detection '{detection_id}' due to failed calibration and no precomputed depth maps.")
-                    continue
-                elif precomputed_depth_filename is not None:
-                    assert config.sample_from == SampleFrom.DETECTION, "Config must be set to sample from detection if using precomputed depth maps"
-                    depth = cv2.imread(precomputed_depth_filename, cv2.IMREAD_UNCHANGED)
+                # check if using metric depth model
+                if config.depth_estimation_model == DepthEstimationModel.DEPTH_AHYTHING_METRIC:
+                    assert config.sample_from == SampleFrom.DETECTION, "Config must be set to sample from detection if using metric depth model"
+                    depth = depth_estimation_model(img)
                     disp = np.clip(depth, config.min_depth, config.max_depth) ** -1
-                elif precomputed_depth_filename is None and farthest_calibration_frame_disp is not None:
-                    if config.sample_from == SampleFrom.DETECTION:
-                        disp = dpt(img)
-                        if config.calibrate_metric:
-                            disp = np.clip(disp, eps, np.inf)
-                        disp = calibrate(disp ** exp, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp)
-                        if config.calibrate_metric:
-                            disp = np.clip(disp, config.min_depth, config.max_depth) ** -1
-                    elif config.sample_from == SampleFrom.REFERENCE:
-                        disp = farthest_calibration_frame_disp
-                    else:
-                        raise RuntimeError(f"Invalid configuration value '{config.sample_from}' for configuration sample_from")
-                    depth = np.clip(disp, config.max_depth ** -1, config.min_depth ** -1) ** -1
+                else:
+                    # check if depth from stereo camera exists or calibration succeeded
+                    precomputed_depth_filename = get_extension_agnostic_path(os.path.join(transect_dir, "detection_frames_depth", detection_id), config.depth_image_extensions)
+                    if precomputed_depth_filename is None and farthest_calibration_frame_disp is None:
+                        logging.warn(f"Unable to perform distance estimation on detection '{detection_id}' due to failed calibration and no precomputed depth maps.")
+                        continue
+                    elif precomputed_depth_filename is not None:
+                        assert config.sample_from == SampleFrom.DETECTION, "Config must be set to sample from detection if using precomputed depth maps"
+                        depth = cv2.imread(precomputed_depth_filename, cv2.IMREAD_UNCHANGED)
+                        disp = np.clip(depth, config.min_depth, config.max_depth) ** -1
+                    elif precomputed_depth_filename is None and farthest_calibration_frame_disp is not None:
+                        if config.sample_from == SampleFrom.DETECTION:
+                            disp = depth_estimation_model(img)
+                            if config.calibrate_metric:
+                                disp = np.clip(disp, eps, np.inf)
+                            disp = calibrate(disp ** exp, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp)
+                            if config.calibrate_metric:
+                                disp = np.clip(disp, config.min_depth, config.max_depth) ** -1
+                        elif config.sample_from == SampleFrom.REFERENCE:
+                            disp = farthest_calibration_frame_disp
+                        else:
+                            raise RuntimeError(f"Invalid configuration value '{config.sample_from}' for configuration sample_from")
+                        depth = np.clip(disp, config.max_depth ** -1, config.min_depth ** -1) ** -1
 
                 yield
 

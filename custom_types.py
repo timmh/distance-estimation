@@ -23,3 +23,8 @@ class RegressionMethod(Enum):
     LEASTSQUARES = auto()
     POLY = auto()
     RANSAC_POLY = auto()
+
+
+class DepthEstimationModel(Enum):
+    DPT = auto()
+    DEPTH_AHYTHING_METRIC = auto()
