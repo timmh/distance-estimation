@@ -54,7 +54,7 @@ issn = {1574-9541},
 url = {https://www.sciencedirect.com/science/article/pii/S1574954121003277}
 }
 ```
-Furthermore, as parts of this software are based on [MegaDetector 5.0](https://github.com/microsoft/CameraTraps/releases/tag/v5.0), [Dense Prediction Transformers](https://github.com/isl-org/DPT), and [Segment Anything](https://github.com/facebookresearch/segment-anything) please consider also citing:
+Furthermore, as parts of this software are based on [MegaDetector 5.0](https://github.com/microsoft/CameraTraps/releases/tag/v5.0), [Dense Prediction Transformers](https://github.com/isl-org/DPT), [Segment Anything](https://github.com/facebookresearch/segment-anything), and [Depth Anything](https://github.com/LiheYoung/Depth-Anything) please consider also citing:
 ```
 @article{megadetector,
   title={Efficient pipeline for camera trap image review},
@@ -74,5 +74,11 @@ Furthermore, as parts of this software are based on [MegaDetector 5.0](https://g
   author={Kirillov, Alexander and Mintun, Eric and Ravi, Nikhila and Mao, Hanzi and Rolland, Chloe and Gustafson, Laura and Xiao, Tete and Whitehead, Spencer and Berg, Alexander C. and Lo, Wan-Yen and Doll{\'a}r, Piotr and Girshick, Ross},
   journal={arXiv:2304.02643},
   year={2023}
+}
+@inproceedings{depthanything,
+  title={Depth Anything: Unleashing the Power of Large-Scale Unlabeled Data}, 
+  author={Yang, Lihe and Kang, Bingyi and Huang, Zilong and Xu, Xiaogang and Feng, Jiashi and Zhao, Hengshuang},
+  booktitle={CVPR},
+  year={2024}
 }
 ```
