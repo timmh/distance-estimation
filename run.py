@@ -205,7 +205,7 @@ def run(config: Config):
                 scores, labels, boxes = scores[high_confidence_idx], labels[high_confidence_idx], boxes[high_confidence_idx]
 
                 # sort from image center outwards
-                centerness = [((img.shape[1] / 2) - (box[0] + box[2] / 2)) ** 2 + ((img.shape[0] / 2) - (box[1] + box[3] / 2)) ** 2 for box in boxes]
+                centerness = [((img.shape[1] / 2) - (box[0] + box[2]) / 2) ** 2 + ((img.shape[0] / 2) - (box[1] + box[3]) / 2) ** 2 for box in boxes]
                 centerness_idx = np.argsort(centerness)
                 scores, labels, boxes = scores[centerness_idx], labels[centerness_idx], boxes[centerness_idx]
 
@@ -267,14 +267,14 @@ def run(config: Config):
                     # compute horizontal angle a
                     f = (0.5 * depth.shape[1]) / math.tan(0.5 * math.pi * config.camera_horizontal_fov / 180)
                     c = np.array([0, 0, f])
-                    p = np.array([0, box[0] + box[2] / 2 - depth.shape[1] / 2, f])
-                    a = math.copysign(1, box[0] + box[2] / 2 - depth.shape[1] / 2) * math.acos((c @ p) / (np.linalg.norm(c) * np.linalg.norm(p)))
+                    p = np.array([0, (box[0] + box[2]) / 2 - depth.shape[1] / 2, f])
+                    a = math.copysign(1, (box[0] + box[2]) / 2 - depth.shape[1] / 2) * math.acos((c @ p) / (np.linalg.norm(c) * np.linalg.norm(p)))
 
                     # compute vertical angle b
                     f = (0.5 * depth.shape[0]) / math.tan(0.5 * math.pi * config.camera_vertical_fov / 180)
                     c = np.array([0, 0, f])
-                    p = np.array([box[1] + box[3] / 2 - depth.shape[0] / 2, 0, f])
-                    b = math.copysign(1, box[1] + box[3] / 2 - depth.shape[0] / 2) * math.acos((c @ p) / (np.linalg.norm(c) * np.linalg.norm(p)))
+                    p = np.array([(box[1] + box[3]) / 2 - depth.shape[0] / 2, 0, f])
+                    b = math.copysign(1, (box[1] + box[3]) / 2 - depth.shape[0] / 2) * math.acos((c @ p) / (np.linalg.norm(c) * np.linalg.norm(p)))
 
                     # compute world position
                     x = sampled_depths[-1] * math.tan(a)
