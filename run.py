@@ -157,37 +157,6 @@ def run(config: Config):
 
                 yield
 
-                # check if using metric depth model
-                if config.depth_estimation_model == DepthEstimationModel.DEPTH_AHYTHING_METRIC:
-                    assert config.sample_from == SampleFrom.DETECTION, "Config must be set to sample from detection if using metric depth model"
-                    depth = depth_estimation_model(img)
-                    disp = np.clip(depth, config.min_depth, config.max_depth) ** -1
-                else:
-                    # check if depth from stereo camera exists or calibration succeeded
-                    precomputed_depth_filename = get_extension_agnostic_path(os.path.join(transect_dir, "detection_frames_depth", detection_id), config.depth_image_extensions)
-                    if precomputed_depth_filename is None and farthest_calibration_frame_disp is None:
-                        logging.warn(f"Unable to perform distance estimation on detection '{detection_id}' due to failed calibration and no precomputed depth maps.")
-                        continue
-                    elif precomputed_depth_filename is not None:
-                        assert config.sample_from == SampleFrom.DETECTION, "Config must be set to sample from detection if using precomputed depth maps"
-                        depth = cv2.imread(precomputed_depth_filename, cv2.IMREAD_UNCHANGED)
-                        disp = np.clip(depth, config.min_depth, config.max_depth) ** -1
-                    elif precomputed_depth_filename is None and farthest_calibration_frame_disp is not None:
-                        if config.sample_from == SampleFrom.DETECTION:
-                            disp = depth_estimation_model(img)
-                            if config.calibrate_metric:
-                                disp = np.clip(disp, eps, np.inf)
-                            disp = calibrate(disp ** exp, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp)
-                            if config.calibrate_metric:
-                                disp = np.clip(disp, config.min_depth, config.max_depth) ** -1
-                        elif config.sample_from == SampleFrom.REFERENCE:
-                            disp = farthest_calibration_frame_disp
-                        else:
-                            raise RuntimeError(f"Invalid configuration value '{config.sample_from}' for configuration sample_from")
-                        depth = np.clip(disp, config.max_depth ** -1, config.min_depth ** -1) ** -1
-
-                yield
-
                 # run animal detection
                 scores, labels, boxes = megadetector(img)
 
@@ -212,11 +181,52 @@ def run(config: Config):
                 if config.detection_sampling_method == DetectionSamplingMethod.SAM:
                     # compute SAM masks
                     masks = sam(img, boxes)
+                    animal_mask = np.any(masks, axis=0)
 
                     yield
                 else:
                     # dummy masks
                     masks = [None for _ in boxes]
+
+                    # compute animal mask from bounding boxes
+                    animal_mask = np.zeros(img.shape[0:2], dtype=bool)
+                    for box in boxes:
+                        ymin, ymax = max(0, min(img.shape[0] - 2, round(box[1]))), max(0, min(img.shape[0] - 1, round(box[3])))
+                        xmin, xmax = max(0, min(img.shape[1] - 2, round(box[0]))), max(0, min(img.shape[1] - 1, round(box[2])))
+                        animal_mask[ymin:ymax, xmin:xmax] = True
+
+
+                # check if using metric depth model
+                if config.depth_estimation_model == DepthEstimationModel.DEPTH_AHYTHING_METRIC:
+                    assert config.sample_from == SampleFrom.DETECTION, "Config must be set to sample from detection if using metric depth model"
+                    depth = depth_estimation_model(img)
+                    disp = np.clip(depth, config.min_depth, config.max_depth) ** -1
+                else:
+                    # check if depth from stereo camera exists or calibration succeeded
+                    precomputed_depth_filename = get_extension_agnostic_path(os.path.join(transect_dir, "detection_frames_depth", detection_id), config.depth_image_extensions)
+                    if precomputed_depth_filename is None and farthest_calibration_frame_disp is None:
+                        logging.warn(f"Unable to perform distance estimation on detection '{detection_id}' due to failed calibration and no precomputed depth maps.")
+                        continue
+                    elif precomputed_depth_filename is not None:
+                        assert config.sample_from == SampleFrom.DETECTION, "Config must be set to sample from detection if using precomputed depth maps"
+                        depth = cv2.imread(precomputed_depth_filename, cv2.IMREAD_UNCHANGED)
+                        disp = np.clip(depth, config.min_depth, config.max_depth) ** -1
+                    elif precomputed_depth_filename is None and farthest_calibration_frame_disp is not None:
+                        if config.sample_from == SampleFrom.DETECTION:
+                            disp = depth_estimation_model(img)
+                            if config.calibrate_metric:
+                                disp = np.clip(disp, eps, np.inf)
+                            disp_masked = np.ma.masked_where(animal_mask, disp ** exp) if config.calibration_mask_animals else (disp ** exp)
+                            disp = calibrate(disp_masked, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp)
+                            if config.calibrate_metric:
+                                disp = np.clip(disp, config.min_depth, config.max_depth) ** -1
+                        elif config.sample_from == SampleFrom.REFERENCE:
+                            disp = farthest_calibration_frame_disp
+                        else:
+                            raise RuntimeError(f"Invalid configuration value '{config.sample_from}' for configuration sample_from")
+                        depth = np.clip(disp, config.max_depth ** -1, config.min_depth ** -1) ** -1
+
+                yield
 
                 sampled_depths = []
                 sample_locations = []

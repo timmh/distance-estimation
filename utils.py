@@ -92,11 +92,10 @@ def calibrate(x, y, method, n=2, poly_deg=5):
     x_mask = x.mask if hasattr(x, "mask") else np.zeros_like(x, dtype=bool)
     y_mask = y.mask if hasattr(y, "mask") else np.zeros_like(y, dtype=bool)
     mask = x_mask | y_mask
-    if np.mean(mask * 1) <= 0.5:
-        x, y = (
-            x[~mask],
-            y[~mask],
-        )
+    x, y = (
+        x[~mask],
+        y[~mask],
+    )
 
     x, y = x.reshape(-1), y.reshape(-1)
 
