@@ -62,7 +62,7 @@ def get_calibration_frame_dist(transect_dir, calibration_frame_id):
     """Try to get metric depth belonging to a calibration frames using multiple methods"""
     # first try wether the filename itself represents the distance in meters
     try:
-        return float(re.sub(r"[a-zA-Z]", "", calibration_frame_id))
+        return float(re.match(r"^(\d+(?:\.\d*)?)(?:m|cm|dm|ft|in)?$", calibration_frame_id)[1])
     except:
         pass
 
