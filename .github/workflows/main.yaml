@@ -35,6 +35,8 @@ jobs:
       run: ./weights/download.sh
     - name: Run PyInstaller
       run: pyinstaller main.spec
+    - name: Test CLI
+      run: ./dist/DistanceEstimation --cli --help
     - name: Upload artifacts
       uses: actions/upload-release-asset@v1
       env:
@@ -58,6 +60,8 @@ jobs:
       run: ./weights/download.sh
     - name: Run PyInstaller
       run: pyinstaller main.spec
+    - name: Test CLI
+      run: ./dist/DistanceEstimation.app/Contents/MacOS/DistanceEstimation --cli --help
     - name: Package as DMG file
       run: dmgbuild -s dmgbuild_settings.py DistanceEstimation dist/DistanceEstimation.dmg
     - name: Upload artifacts
@@ -83,6 +87,8 @@ jobs:
       run: ./weights/download.sh
     - name: Run PyInstaller
       run: pyinstaller main.spec
+    - name: Test CLI
+      run: ./dist/DistanceEstimation.app/Contents/MacOS/DistanceEstimation --cli --help
     - name: Package as DMG file
       run: dmgbuild -s dmgbuild_settings.py DistanceEstimation dist/DistanceEstimation.dmg
     - name: Upload artifacts
@@ -108,6 +114,8 @@ jobs:
       run: .\weights\download.ps1
     - name: Run PyInstaller
       run: pyinstaller main.spec
+    - name: Test CLI
+      run: .\dist\DistanceEstimation.exe --cli --help
     - name: Upload artifacts
       uses: actions/upload-release-asset@v1
       env:
