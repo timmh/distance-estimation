@@ -22,7 +22,7 @@ class SAM(DownloadableWeights):
             weights_url = f"https://github.com/timmh/segment-anything/releases/download/v1.0.0/sam_vit_b_01ec64_{session_name}.onnx"
             weights_path = self.get_weights(weights_url)
 
-            providers = get_onnxruntime_providers()
+            providers = get_onnxruntime_providers(enable_coreml=False)
             try:
                 session = onnxruntime.InferenceSession(
                     weights_path,

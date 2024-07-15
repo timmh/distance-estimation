@@ -11,6 +11,7 @@ import cv2
 from config import Config
 from dpt import DPT
 from depth_anything import DepthAnything
+from metric3d import Metric3D
 from megadetector import MegaDetector, MegaDetectorLabel
 from sam import SAM
 from custom_types import DetectionSamplingMethod, MultipleAnimalReduction, SampleFrom, DepthEstimationModel
@@ -35,9 +36,17 @@ def run(config: Config):
     assert os.path.isdir(config.data_dir), "Data dir is not a directory"
     assert os.path.isdir(os.path.join(config.data_dir, "transects")) and os.path.isdir(os.path.join(config.data_dir, "results")), "Data dir must contain 'transect' and 'results' subdirectories. Please consult the manual for the correct directory structure."
     assert len(glob.glob(os.path.join(config.data_dir, "transects", "*/"))), "The 'transect' subdirectory must contain at least one transect. Please consult the manual for the correct directory structure."
+    # assert config.depth_estimation_model != DepthEstimationModel.METRIC_3D_V2_VIT_S or config.calibrate_metric == True
 
     yield
-    depth_estimation_model = DPT() if config.depth_estimation_model == DepthEstimationModel.DPT else DepthAnything()
+    if config.depth_estimation_model == DepthEstimationModel.DPT:
+        depth_estimation_model = DPT()
+    elif config.depth_estimation_model == DepthEstimationModel.DEPTH_AHYTHING_METRIC:
+        depth_estimation_model = DepthAnything()
+    elif config.depth_estimation_model == DepthEstimationModel.METRIC_3D_V2_VIT_S:
+        depth_estimation_model = Metric3D()
+    else:
+        raise ValueError(f"Invalud depth estimation model '{config.depth_estimation_model}'")
     yield
     megadetector = MegaDetector()
     yield

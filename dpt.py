@@ -53,7 +53,7 @@ class DPT(DownloadableWeights):
         img = img / 255.
 
         # resize
-        img_input = cv2.resize(img, (self.net_h, self.net_w), cv2.INTER_AREA)
+        img_input = cv2.resize(img, (self.net_w, self.net_h), cv2.INTER_AREA)
 
         # normalize
         img_input = (img_input - self.mean) / self.std

@@ -9,7 +9,7 @@ import onnxruntime
 from utils import get_onnxruntime_providers, DownloadableWeights
 
 
-class DepthAnything(DownloadableWeights):
+class Metric3D(DownloadableWeights):
     def __init__(self):
         self._model_loaded = False
 
@@ -18,7 +18,7 @@ class DepthAnything(DownloadableWeights):
             return
         self._model_loaded = True
 
-        weights_url = "https://github.com/timmh/Depth-Anything/releases/download/onnx_v0.1/depth_anything_metric_depth_outdoor.onnx"
+        weights_url = "https://github.com/timmh/Metric3D/releases/download/v0.1/metric3d_vit_small.onnx"
         weights_path = self.get_weights(weights_url)
 
         providers = get_onnxruntime_providers()
@@ -49,11 +49,8 @@ class DepthAnything(DownloadableWeights):
         # BGR to RGB
         img = img[..., ::-1]
 
-        # convert into 0..1 range
-        img = img / 255.
-
         # resize
-        img_input = cv2.resize(img, (self.net_w, self.net_h), cv2.INTER_AREA)
+        img_input = cv2.resize(img, (self.net_w, self.net_h), cv2.INTER_LINEAR)
 
         # normalize
         img_input = (img_input - self.mean) / self.std
@@ -65,8 +62,11 @@ class DepthAnything(DownloadableWeights):
         img_input = img_input[None, ...]
 
         # compute
-        prediction = self.session.run(["output"], {"input": img_input.astype(np.float32)})[0][0][0]
+        prediction = self.session.run(["pred_depth"], {"image": img_input.astype(np.float32)})[0][0][0]
         prediction = cv2.resize(prediction, (img.shape[1], img.shape[0]), cv2.INTER_CUBIC)
         prediction *= self.prediction_factor
+
+        # into disparity
+        prediction = np.clip(prediction, 1e-6, np.inf) ** -1
 
         return prediction
