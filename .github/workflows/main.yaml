@@ -31,8 +31,6 @@ jobs:
         python-version: '3.9'
     - name: Install requirements
       run: sudo apt-get install libgirepository1.0-dev && pip install -r requirements.txt
-    - name: Download weights
-      run: ./weights/download.sh
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
@@ -56,8 +54,6 @@ jobs:
         python-version: '3.9'
     - name: Install requirements
       run: pip install -r requirements_macos.txt
-    - name: Download weights
-      run: ./weights/download.sh
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
@@ -83,8 +79,6 @@ jobs:
         python-version: '3.9'
     - name: Install requirements
       run: pip install -r requirements_macos.txt
-    - name: Download weights
-      run: ./weights/download.sh
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
@@ -110,8 +104,6 @@ jobs:
         python-version: '3.9'
     - name: Install requirements
       run: pip install -r requirements.txt
-    - name: Download weights
-      run: .\weights\download.ps1
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
