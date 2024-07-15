@@ -7,6 +7,7 @@ import argparse
 import enum
 import urllib.request
 import re
+from contextlib import contextmanager
 import cv2
 import numpy as np
 from sklearn import linear_model
@@ -15,6 +16,17 @@ from custom_types import RegressionMethod
 
 
 dirs = PlatformDirs("DistanceEstimation", "timmh")
+random_seed = 42
+
+
+@contextmanager
+def random_seed_manager(seed=random_seed):
+    state = np.random.get_state()
+    np.random.seed(seed)
+    try:
+        yield
+    finally:
+        np.random.set_state(state)
 
 
 def multi_file_extension_glob(base: str, extensions: str, recursive=False):
@@ -85,82 +97,83 @@ def get_calibration_frame_dist(transect_dir, calibration_frame_id):
 
 
 def calibrate(x, y, method, n=2, poly_deg=5):
+    with random_seed_manager():
 
-    assert n in [1, 2]
-    assert len(x) >= 2 and len(y) >= 2 and len(x) == len(y), f"inconsistent sample length in calibration: len(x)={len(x)}, len(y)={len(y)}"
+        assert n in [1, 2]
+        assert len(x) >= 2 and len(y) >= 2 and len(x) == len(y), f"inconsistent sample length in calibration: len(x)={len(x)}, len(y)={len(y)}"
 
-    x_mask = x.mask if hasattr(x, "mask") else np.zeros_like(x, dtype=bool)
-    y_mask = y.mask if hasattr(y, "mask") else np.zeros_like(y, dtype=bool)
-    mask = x_mask | y_mask
-    x, y = (
-        x[~mask],
-        y[~mask],
-    )
+        x_mask = x.mask if hasattr(x, "mask") else np.zeros_like(x, dtype=bool)
+        y_mask = y.mask if hasattr(y, "mask") else np.zeros_like(y, dtype=bool)
+        mask = x_mask | y_mask
+        x, y = (
+            x[~mask],
+            y[~mask],
+        )
 
-    x, y = x.reshape(-1), y.reshape(-1)
+        x, y = x.reshape(-1), y.reshape(-1)
 
-    if method == RegressionMethod.RANSAC:
-        ransac = linear_model.RANSACRegressor()
-        ransac.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
-        c = ransac.predict(np.array([0]).reshape(-1, 1)) if n == 2 else 0
-        m = ransac.predict(np.array([1]).reshape(-1, 1)) - c
-        m, c = m.item(), c.item()
-        return lambda data: m * data + c
+        if method == RegressionMethod.RANSAC:
+            ransac = linear_model.RANSACRegressor(random_state=random_seed)
+            ransac.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
+            c = ransac.predict(np.array([0]).reshape(-1, 1)) if n == 2 else 0
+            m = ransac.predict(np.array([1]).reshape(-1, 1)) - c
+            m, c = m.item(), c.item()
+            return lambda data: m * data + c
 
-    if method == RegressionMethod.LEASTSQUARES:
-        try:
-            if n == 2:
-                A = np.vstack([x, np.ones(len(x))]).T
-                m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+        if method == RegressionMethod.LEASTSQUARES:
+            try:
+                if n == 2:
+                    A = np.vstack([x, np.ones(len(x))]).T
+                    m, c = np.linalg.lstsq(A, y, rcond=None)[0]
 
-                m, c = m.item(), c.item()
-                return lambda data: m * data + c
-            else:
-                c = 0
-                A = x.T
-                m = np.linalg.lstsq(A, y, rcond=None)[0]
+                    m, c = m.item(), c.item()
+                    return lambda data: m * data + c
+                else:
+                    c = 0
+                    A = x.T
+                    m = np.linalg.lstsq(A, y, rcond=None)[0]
 
-                m, c = m.item(), c.item()
-                return lambda data: m * data + c
-        except np.linalg.LinAlgError:
-            return calibrate(x, y, method="RANSAC", n=n)
+                    m, c = m.item(), c.item()
+                    return lambda data: m * data + c
+            except np.linalg.LinAlgError:
+                return calibrate(x, y, method="RANSAC", n=n)
 
-    if method == RegressionMethod.POLY:
-        z, _ = np.polynomial.polynomial.polyfit(x, y, poly_deg, full=True)
-        p = np.poly1d(z)
-        return p
+        if method == RegressionMethod.POLY:
+            z, _ = np.polynomial.polynomial.polyfit(x, y, poly_deg, full=True)
+            p = np.poly1d(z)
+            return p
 
-    if method == RegressionMethod.RANSAC_POLY:
-        # adapted from https://gist.github.com/geohot/9743ad59598daf61155bf0d43a10838c
+        if method == RegressionMethod.RANSAC_POLY:
+            # adapted from https://gist.github.com/geohot/9743ad59598daf61155bf0d43a10838c
 
-        n = 20  # minimum number of data points required to fit the model
-        k = 100  # maximum number of iterations allowed in the algorithm
-        t = 0.5  # threshold value to determine when a data point fits a model
-        d = 100  # number of close data points required to assert that a model fits well to data
-        f = 0.25  # fraction of close data points required
+            n = 20  # minimum number of data points required to fit the model
+            k = 100  # maximum number of iterations allowed in the algorithm
+            t = 0.5  # threshold value to determine when a data point fits a model
+            d = 100  # number of close data points required to assert that a model fits well to data
+            f = 0.25  # fraction of close data points required
 
-        besterr = np.inf
-        bestfit = None
-        for _ in range(k):
-            maybeinliers = np.random.randint(len(x), size=n)
-            maybemodel, _ = np.polynomial.polynomial.polyfit(
-                x[maybeinliers], y[maybeinliers], poly_deg, full=True
-            )
-            maybemodel = np.polyfit(x[maybeinliers], y[maybeinliers], poly_deg)
-            alsoinliers = np.abs(np.polyval(maybemodel, x) - y) < t
-            if sum(alsoinliers) > d and sum(alsoinliers) > len(x) * f:
-                bettermodel = np.polyfit(x[alsoinliers], y[alsoinliers], poly_deg)
-                thiserr = np.sum(
-                    np.abs(np.polyval(bettermodel, x[alsoinliers]) - y[alsoinliers])
+            besterr = np.inf
+            bestfit = None
+            for _ in range(k):
+                maybeinliers = np.random.randint(len(x), size=n)
+                maybemodel, _ = np.polynomial.polynomial.polyfit(
+                    x[maybeinliers], y[maybeinliers], poly_deg, full=True
                 )
-                if thiserr < besterr:
-                    bestfit = bettermodel
-                    besterr = thiserr
+                maybemodel = np.polyfit(x[maybeinliers], y[maybeinliers], poly_deg)
+                alsoinliers = np.abs(np.polyval(maybemodel, x) - y) < t
+                if sum(alsoinliers) > d and sum(alsoinliers) > len(x) * f:
+                    bettermodel = np.polyfit(x[alsoinliers], y[alsoinliers], poly_deg)
+                    thiserr = np.sum(
+                        np.abs(np.polyval(bettermodel, x[alsoinliers]) - y[alsoinliers])
+                    )
+                    if thiserr < besterr:
+                        bestfit = bettermodel
+                        besterr = thiserr
 
-        if bestfit is None:
-            raise ValueError("unable to calibrate using RANSAC_POLY")
-        p = np.poly1d(bestfit)
-        return p
+            if bestfit is None:
+                raise ValueError("unable to calibrate using RANSAC_POLY")
+            p = np.poly1d(bestfit)
+            return p
 
 
 def is_standalone():
