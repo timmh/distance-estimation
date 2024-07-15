@@ -216,7 +216,10 @@ def run(config: Config):
                             disp = depth_estimation_model(img)
                             if config.calibrate_metric:
                                 disp = np.clip(disp, eps, np.inf)
-                            disp_masked = np.ma.masked_where(animal_mask, disp ** exp) if config.calibration_mask_animals else (disp ** exp)
+                            mask = (farthest_calibration_frame_disp ** -1) >= (config.max_depth - eps)
+                            if config.calibration_mask_animals:
+                                mask = mask | animal_mask
+                            disp_masked = np.ma.masked_where(mask, disp ** exp)
                             disp = calibrate(disp_masked, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp)
                             if config.calibrate_metric:
                                 disp = np.clip(disp, config.min_depth, config.max_depth) ** -1
