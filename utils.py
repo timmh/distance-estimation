@@ -113,7 +113,10 @@ def calibrate(x, y, method, n=2, poly_deg=5):
         x, y = x.reshape(-1), y.reshape(-1)
 
         if method == RegressionMethod.RANSAC:
-            ransac = linear_model.RANSACRegressor(random_state=random_seed)
+            def is_model_valid(model, X_, y_):
+                return (model.coef_ > 0).all()
+            estimator = linear_model.LinearRegression(positive=True)
+            ransac = linear_model.RANSACRegressor(estimator=estimator, is_model_valid=is_model_valid, random_state=random_seed)
             ransac.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
             c = ransac.predict(np.array([0]).reshape(-1, 1)) if n == 2 else 0
             m = ransac.predict(np.array([1]).reshape(-1, 1)) - c
