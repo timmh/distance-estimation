@@ -19,7 +19,8 @@ class Metric3D(DownloadableWeights):
         self._model_loaded = True
 
         weights_url = "https://github.com/timmh/Metric3D/releases/download/v0.1/metric3d_vit_small.onnx"
-        weights_path = self.get_weights(weights_url)
+        weights_md5 = "f620d1b8d70dd3cd8652b82cfe9f9a77"
+        weights_path = self.get_weights(weights_url, weights_md5)
 
         providers = get_onnxruntime_providers()
         try:

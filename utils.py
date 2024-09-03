@@ -8,6 +8,7 @@ import enum
 import urllib.request
 import re
 from contextlib import contextmanager
+import hashlib
 import cv2
 import numpy as np
 from sklearn import linear_model
@@ -246,18 +247,31 @@ class EnumActionLowerCase(argparse.Action):
         setattr(namespace, self.dest, value)
 
 
+def md5sum_from_filepath(filepath, chunksize=8192):
+    with open(filepath, "rb") as f:
+        file_hash = hashlib.md5()
+        chunk = f.read(chunksize)
+        while chunk:
+            file_hash.update(chunk)
+            chunk = f.read(chunksize)
+
+    return file_hash.hexdigest()
+
+
 class DownloadableWeights:
-    def get_weights(self, weights_url):
+    def get_weights(self, weights_url, md5sum=None):
         download_dir = os.path.join(dirs.user_cache_dir, "weights")
         filename = weights_url.split("/")[-1]
         filepath = os.path.join(download_dir, filename)
-        if os.path.exists(filepath):
-            return filepath
-
         try:
-            os.makedirs(download_dir, exist_ok=True)
-            urllib.request.urlretrieve(weights_url, filepath)
-            return filepath
+            if os.path.exists(filepath):
+                assert md5sum is None or md5sum_from_filepath(filepath) == md5sum
+                return filepath
+            else:
+                os.makedirs(download_dir, exist_ok=True)
+                urllib.request.urlretrieve(weights_url, filepath)
+                assert md5sum is None or md5sum_from_filepath(filepath) == md5sum
+                return filepath
         except Exception as e:
             os.unlink(filepath)
-            raise e
+            raise RuntimeError(f"Failed retrieving weight '{filename}'. Please try again. Full exception: {e}")

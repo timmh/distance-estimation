@@ -23,7 +23,8 @@ class MegaDetector(DownloadableWeights):
         self._model_loaded = True
 
         weights_url = "https://github.com/timmh/MegaDetectorLite/releases/download/v0.2/md_v5a.0.0.onnx"
-        weights_path = self.get_weights(weights_url)
+        weights_md5 = "c2c93e4ed7e297eb650562df74341a25"
+        weights_path = self.get_weights(weights_url, weights_md5)
 
         providers = get_onnxruntime_providers(enable_coreml=False)
         try:

@@ -20,7 +20,8 @@ class SAM(DownloadableWeights):
         for session_name in ["encoder", "decoder"]:
 
             weights_url = f"https://github.com/timmh/segment-anything/releases/download/v1.0.0/sam_vit_b_01ec64_{session_name}.onnx"
-            weights_path = self.get_weights(weights_url)
+            weights_md5 = dict(encoder="c9e1e01e436573f7d11dcfe3a81607d7", decoder="3dccf28e1c1c1697d48829da23789ecd")[session_name]
+            weights_path = self.get_weights(weights_url, weights_md5)
 
             providers = get_onnxruntime_providers(enable_coreml=False)
             try:

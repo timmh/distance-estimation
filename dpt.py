@@ -19,7 +19,8 @@ class DPT(DownloadableWeights):
         self._model_loaded = True
 
         weights_url = "https://github.com/timmh/DPT/releases/download/onnx_v0.1/dpt_hybrid-midas-6c3ec701.onnx"
-        weights_path = self.get_weights(weights_url)
+        weights_md5 = "2e9e68ad03f4c519e3624ab181ffe888"
+        weights_path = self.get_weights(weights_url, weights_md5)
 
         providers = get_onnxruntime_providers()
         try:
