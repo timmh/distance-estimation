@@ -10,12 +10,13 @@ import numpy as np
 import cv2
 from config import Config
 from dpt import DPT
+from dpt_pytorch import DPTPyTorch
 from depth_anything import DepthAnything
 from metric3d import Metric3D
 from megadetector import MegaDetector, MegaDetectorLabel
 from sam import SAM
 from custom_types import DetectionSamplingMethod, MultipleAnimalReduction, SampleFrom, DepthEstimationModel
-from utils import calibrate, crop, resize, exception_to_str, get_calibration_frame_dist, get_extension_agnostic_path, multi_file_extension_glob
+from utils import calibrate, calibrate_v0, crop, resize, exception_to_str, get_calibration_frame_dist, get_extension_agnostic_path, multi_file_extension_glob, blur_and_downsample
 from visualization import visualize_detection, visualize_farthest_calibration_frame
 
 
@@ -39,8 +40,13 @@ def run(config: Config):
     # assert config.depth_estimation_model != DepthEstimationModel.METRIC_3D_V2_VIT_S or config.calibrate_metric == True
 
     yield
+
+    do_calibrate = calibrate
     if config.depth_estimation_model == DepthEstimationModel.DPT:
         depth_estimation_model = DPT()
+    elif config.depth_estimation_model == DepthEstimationModel.DPT_PYTORCH:
+        depth_estimation_model = DPTPyTorch()
+        do_calibrate = calibrate_v0
     elif config.depth_estimation_model == DepthEstimationModel.DEPTH_AHYTHING_METRIC:
         depth_estimation_model = DepthAnything()
     elif config.depth_estimation_model == DepthEstimationModel.METRIC_3D_V2_VIT_S:
@@ -119,7 +125,7 @@ def run(config: Config):
                         disp = resize(disp, farthest_calibration_frame_disp.shape)
                         if config.calibrate_metric:
                             disp = np.clip(disp, eps, np.inf)
-                        disp_calibrated = calibrate(
+                        disp_calibrated = do_calibrate(
                             disp ** exp,
                             farthest_calibration_frame_disp ** exp,
                             config.calibration_regression_method,
@@ -129,7 +135,7 @@ def run(config: Config):
                         x.append(np.median(disp_calibrated.data[disp_calibrated.mask]))
                         y.append(dist ** -1)
 
-                    calibration = calibrate(np.array(x) ** exp, np.array(y) ** exp, config.calibration_regression_method)
+                    calibration = do_calibrate(np.array(x) ** exp, np.array(y) ** exp, config.calibration_regression_method)
                     farthest_calibration_frame_disp = np.ma.masked_where(
                         farthest_calibration_frame_disp.mask,
                         calibration(farthest_calibration_frame_disp.data ** exp) ** exp,
@@ -229,7 +235,10 @@ def run(config: Config):
                             if config.calibration_mask_animals:
                                 mask = mask | animal_mask
                             disp_masked = np.ma.masked_where(mask, disp ** exp)
-                            disp = calibrate(disp_masked, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp)
+                            if config.calibrate_blur:
+                                disp = do_calibrate(blur_and_downsample(disp_masked), blur_and_downsample(farthest_calibration_frame_disp) ** exp, config.calibration_regression_method)(disp ** exp)
+                            else:
+                                disp = do_calibrate(disp_masked, farthest_calibration_frame_disp ** exp, config.calibration_regression_method)(disp ** exp)
                             if config.calibrate_metric:
                                 disp = np.clip(disp, config.min_depth, config.max_depth) ** -1
                         elif config.sample_from == SampleFrom.REFERENCE:

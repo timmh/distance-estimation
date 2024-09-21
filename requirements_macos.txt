@@ -8,3 +8,5 @@ toga==0.3.0.dev39
 tqdm==4.64.0
 platformdirs==4.2.0
 dmgbuild==1.6.0
+timm==1.0.9
+torch==2.2.2

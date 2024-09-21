@@ -12,6 +12,7 @@ import hashlib
 import cv2
 import numpy as np
 from sklearn import linear_model
+import scipy.ndimage as ndimage
 from platformdirs import PlatformDirs
 from custom_types import RegressionMethod
 
@@ -180,6 +181,104 @@ def calibrate(x, y, method, n=2, poly_deg=5):
             return p
 
 
+def calibrate_v0(x, y, method, n=2, poly_deg=5):
+    with random_seed_manager():
+
+        assert n in [1, 2]
+
+        x_mask = x.mask if hasattr(x, "mask") else np.zeros_like(x, dtype=bool)
+        y_mask = y.mask if hasattr(y, "mask") else np.zeros_like(y, dtype=bool)
+        mask = x_mask | y_mask
+        if np.mean(mask * 1) <= 0.5:
+            x, y = (
+                x[~mask],
+                y[~mask],
+            )
+
+        x, y = x.reshape(-1), y.reshape(-1)
+
+        if method == RegressionMethod.RANSAC:
+            try:
+                ransac = linear_model.RANSACRegressor()
+                ransac.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
+                c = ransac.predict(np.array([0]).reshape(-1, 1)) if n == 2 else 0
+                m = ransac.predict(np.array([1]).reshape(-1, 1)) - c
+                m, c = m.item(), c.item()
+                return lambda data: m * data + c
+            except ValueError:
+                print(f"Failed RANSAC calibration. Retrying with LEASTSQUARES.")
+                A = np.vstack([x, np.ones(len(x))]).T
+                m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+
+                m, c = m.item(), c.item()
+                return lambda data: m * data + c
+
+
+        if method == RegressionMethod.LEASTSQUARES:
+            try:
+                if n == 2:
+                    A = np.vstack([x, np.ones(len(x))]).T
+                    m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+
+                    m, c = m.item(), c.item()
+                    return lambda data: m * data + c
+                else:
+                    c = 0
+                    A = x.T
+                    m = np.linalg.lstsq(A, y, rcond=None)[0]
+
+                    m, c = m.item(), c.item()
+                    return lambda data: m * data + c
+            except np.linalg.LinAlgError:
+                return do_calibrate(x, y, method="RANSAC", n=n)
+
+        if method == RegressionMethod.POLY:
+            z, _ = np.polynomial.polynomial.polyfit(x, y, poly_deg, full=True)
+            p = np.poly1d(z)
+            return p
+
+        if method == RegressionMethod.RANSAC_POLY:
+            # adapted from https://gist.github.com/geohot/9743ad59598daf61155bf0d43a10838c
+
+            # n – minimum number of data points required to fit the model
+            # k – maximum number of iterations allowed in the algorithm
+            # t – threshold value to determine when a data point fits a model
+            # d – number of close data points required to assert that a model fits well to data
+            # f – fraction of close data points required
+            n = 20
+            k = 100
+            t = 0.5
+            d = 100
+            f = 0.25
+
+            besterr = np.inf
+            bestfit = None
+            for kk in range(k):
+                maybeinliers = np.random.randint(len(x), size=n)
+                # maybemodel, _ = np.polynomial.polynomial.polyfit(
+                #     x[maybeinliers], y[maybeinliers], poly_deg, full=True
+                # )
+                import warnings
+
+                warnings.simplefilter("ignore", np.RankWarning)
+
+                maybemodel = np.polyfit(x[maybeinliers], y[maybeinliers], poly_deg)
+                alsoinliers = np.abs(np.polyval(maybemodel, x) - y) < t
+                if sum(alsoinliers) > d and sum(alsoinliers) > len(x) * f:
+                    bettermodel = np.polyfit(x[alsoinliers], y[alsoinliers], poly_deg)
+                    thiserr = np.sum(
+                        np.abs(np.polyval(bettermodel, x[alsoinliers]) - y[alsoinliers])
+                    )
+                    if thiserr < besterr:
+                        bestfit = bettermodel
+                        besterr = thiserr
+
+            if bestfit is None:
+                raise ValueError("unable to calibrate using RANSAC_POLY")
+            p = np.poly1d(bestfit)
+            return p
+
+
 def is_standalone():
     return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
 
@@ -275,3 +374,41 @@ class DownloadableWeights:
         except Exception as e:
             os.unlink(filepath)
             raise RuntimeError(f"Failed retrieving weight '{filename}'. Please try again. Full exception: {e}")
+            raise e
+
+
+def blur_and_downsample(img, calibration_downsampling_factor=1/8, calibration_blur_sigma=41):
+    mask = img.mask if (hasattr(img, "mask") and img.mask.shape != ()) else None
+    img = img if mask is None else img.data
+
+    img = ndimage.gaussian_filter(img, sigma=calibration_blur_sigma)
+    img = cv2.resize(
+        img,
+        None,
+        fx=calibration_downsampling_factor,
+        fy=calibration_downsampling_factor,
+        interpolation=cv2.INTER_LINEAR,
+    )
+
+    if mask is not None:
+        mask = (mask * 255).astype(np.uint8)
+        mask = ndimage.gaussian_filter(mask, sigma=calibration_blur_sigma)
+        mask = cv2.resize(
+            mask,
+            None,
+            fx=calibration_downsampling_factor,
+            fy=calibration_downsampling_factor,
+            interpolation=cv2.INTER_LINEAR,
+        )
+
+        img = np.ma.masked_where(mask > 127, img)
+
+    return img
+
+
+def condition_disparity(disp, eps=1e-6):
+    disp = ndimage.median_filter(disp, size=3)
+    disp = disp - np.min(disp)
+    disp = disp / np.std(disp)
+    disp = np.clip(disp, eps, np.inf)
+    return disp

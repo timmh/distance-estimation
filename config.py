@@ -40,6 +40,7 @@ class Config:
     calibrate_metric: bool = False  # whether to calibrate in metric or in disparity space
     calibration_regression_method: RegressionMethod = RegressionMethod.RANSAC  # one of RANSAC|LEASTSQUARES|POLY|RANSAC_POLY
     calibration_mask_animals: bool = False  # whether to mask animals during calibration
+    calibrate_blur: bool = False  # whether to blur depth images during calibration
 
     # sampling_parameters
     detection_sampling_method: DetectionSamplingMethod = DetectionSamplingMethod.BBOX_PERCENTILE  # one of BBOX_BOTTOM|BBOX_PERCENTILE|SAM

@@ -8,3 +8,6 @@ scikit-learn==1.1.1
 toga==0.3.0.dev39
 tqdm==4.64.0
 platformdirs==4.2.0
+timm==1.0.9
+-f https://download.pytorch.org/whl/torch_stable.html
+torch==2.2.2+cpu
