@@ -267,6 +267,13 @@ def main():
         )
         cli(args)
     else:
+        # workaround for sys.stdout and sys.stderr being None on Windows without attached console.
+        # see https://pyinstaller.org/en/v6.10.0/common-issues-and-pitfalls.html#sys-stdin-sys-stdout-and-sys-stderr-in-noconsole-windowed-applications-windows-only
+        if sys.stdout is None:
+            sys.stdout = open(os.devnull, "w")
+        if sys.stderr is None:
+            sys.stderr = open(os.devnull, "w")
+
         if is_standalone():
             icon = os.path.join(sys._MEIPASS, "assets", "icon.png")
         else:
