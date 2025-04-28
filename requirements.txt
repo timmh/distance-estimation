@@ -5,7 +5,7 @@ onnxruntime-gpu==1.17.1
 opencv-python==4.5.4.60
 pyinstaller==6.10.0
 scikit-learn==1.1.1
-toga==0.3.0.dev39
+toga==0.5.0
 tqdm==4.64.0
 platformdirs==4.2.0
 timm==1.0.9
