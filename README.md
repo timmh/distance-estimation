@@ -38,6 +38,9 @@ DistanceEstimationData
 ```
 The root data directory may be named arbitrarily and must contain two subdirectories: `results` (which will contain distance estimations, visualizations, etc.) and `transects`, which should contain an arbitrary number of subdirectories, each representing a single transect or location. Inside each of these directories, there are three more directories. `calibration_frames` should contain photos of reference objects, each named after the distance in meters the respective reference object represents. `calibration_frames_masks` should contain one equally named binary mask image for each of the photos in the `calibration_frames`, where the reference object is marked in white and everything else in black color. To see how the masks are created please take a look at [this demonstration](assets/mask_howto.mp4). The `detection_frames` finally contain arbitrarily named photos of the animals you want to estimate the distance of. Both `.jp(e)g` and `.png` files are supported.
 
+# Acknowledgements
+Thanks to [Phil Garthen](https://github.com/pgarthen), [Hari Surya Charan Mudragada](https://github.com/ayrus144), [Stefanie Schwarz](https://github.com/StefanieSwz), [Sebastian Speth](https://github.com/speths), [Hendrik Edelhoff](https://github.com/hendrik-edelhoff) and [Ludwig Bothmann](https://github.com/ludwigbothmann) for pointing out an implementation issue with the computation of world coordinates.
+
 ## Citation
 
 If this is useful please consider citing:
