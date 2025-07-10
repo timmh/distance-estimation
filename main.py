@@ -1,5 +1,5 @@
-from argparse import ArgumentParser
 import sys
+from argparse import ArgumentParser
 from collections import OrderedDict
 import json
 import logging
@@ -231,14 +231,6 @@ def cli(args):
 
 def main():
 
-    try:
-        # Close the splash screen.
-        import pyi_splash
-        pyi_splash.close()
-    except ImportError:
-        # Otherwise do nothing.
-        pass
-
     argparser = ArgumentParser()
     argparser.add_argument("--cli", action="store_true", help="Enables CLI operation and disables GUI")
     default_config = Config()
@@ -262,11 +254,17 @@ def main():
             level=logging.INFO,
             format="%(asctime)s [%(levelname)s] %(message)s",
             handlers=[
-                logging.StreamHandler()
+                logging.StreamHandler(sys.stdout)
             ]
         )
         cli(args)
     else:
+        # We are in GUI mode. If on Windows, hide the console window that opened.
+        if sys.platform == "win32":
+            import ctypes
+            # SW_HIDE = 0
+            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+
         # workaround for sys.stdout and sys.stderr being None on Windows without attached console.
         # see https://pyinstaller.org/en/v6.10.0/common-issues-and-pitfalls.html#sys-stdin-sys-stdout-and-sys-stderr-in-noconsole-windowed-applications-windows-only
         if sys.stdout is None:

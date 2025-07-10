@@ -28,16 +28,6 @@ a = Analysis(
     noarchive=False,
 )
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-if platform.system() != 'Darwin':
-    splash = Splash(
-        'assets/splash.png',
-        binaries=a.binaries,
-        datas=a.datas,
-        text_pos=None,
-        text_size=12,
-        minify_script=True,
-        always_on_top=True,
-    )
 
 if platform.system() != 'Darwin':
     exe = EXE(
@@ -46,8 +36,6 @@ if platform.system() != 'Darwin':
         a.binaries,
         a.zipfiles,
         a.datas,
-        splash,
-        splash.binaries,
         [],
         name='DistanceEstimation',
         debug=False,
@@ -56,7 +44,7 @@ if platform.system() != 'Darwin':
         upx=False,
         upx_exclude=[],
         runtime_tmpdir=None,
-        console=False,
+        console=platform.system() == 'Windows',
         disable_windowed_traceback=False,
         argv_emulation=False,
         target_arch=None,

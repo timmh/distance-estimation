@@ -30,7 +30,7 @@ jobs:
       with:
         python-version: '3.10'
     - name: Install requirements
-      run: sudo apt-get install libgirepository-2.0-dev libcairo2-dev && pip install -r requirements.txt
+      run: sudo apt-get update && sudo apt-get install libgirepository-2.0-dev libcairo2-dev && pip install -r requirements.txt
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
