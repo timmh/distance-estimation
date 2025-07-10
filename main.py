@@ -231,6 +231,19 @@ def cli(args):
 
 def main():
 
+    # On Windows, if we're started from a command prompt, ATTACH_PARENT_PROCESS will attach to it.
+    # This allows a single executable to be both a console and a GUI app.
+    # We only want to do this if we're in CLI mode.
+    # A quick check of the args is needed before we properly parse them.
+    is_cli_mode = "--cli" in sys.argv
+    if is_cli_mode and sys.platform == "win32":
+        import ctypes
+        # ATTACH_PARENT_PROCESS = -1
+        if ctypes.windll.kernel32.AttachConsole(-1):
+            # Redirect stdout and stderr to the console.
+            sys.stdout = open("CONOUT$", "w")
+            sys.stderr = open("CONOUT$", "w")
+
     try:
         # Close the splash screen.
         import pyi_splash
@@ -262,7 +275,7 @@ def main():
             level=logging.INFO,
             format="%(asctime)s [%(levelname)s] %(message)s",
             handlers=[
-                logging.StreamHandler()
+                logging.StreamHandler(sys.stdout) # Explicitly use the (potentially new) sys.stdout
             ]
         )
         cli(args)
