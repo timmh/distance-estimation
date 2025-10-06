@@ -26,9 +26,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.12'
     - name: Install requirements
       run: sudo apt-get update && sudo apt-get install libgirepository-2.0-dev libcairo2-dev && pip install -r requirements.txt
     - name: Run PyInstaller
@@ -49,11 +49,11 @@ jobs:
     runs-on: macos-13
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.12'
     - name: Install requirements
-      run: pip install -r requirements_macos.txt
+      run: pip install -r requirements.txt
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
@@ -74,11 +74,11 @@ jobs:
     runs-on: macos-13-large
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.12'
     - name: Install requirements
-      run: pip install -r requirements_macos.txt
+      run: pip install -r requirements.txt
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
@@ -99,9 +99,9 @@ jobs:
     runs-on: windows-2022
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.12'
     - name: Install requirements
       run: pip install -r requirements.txt
     - name: Run PyInstaller
