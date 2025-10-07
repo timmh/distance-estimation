@@ -5,6 +5,9 @@ on:
     tags:
     - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-24.04
@@ -46,7 +49,7 @@ jobs:
         asset_content_type: application/x-executable
   build_macos_x64:
     needs: release
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v5
@@ -58,6 +61,15 @@ jobs:
       run: pyinstaller main.spec
     - name: Test CLI
       run: ./dist/DistanceEstimation.app/Contents/MacOS/DistanceEstimation --cli --help
+    - name: Sign
+      env:
+        APPLE_NOTARIZATION_USER_ID: ${{ secrets.APPLE_NOTARIZATION_USER_ID }}
+        APPLE_NOTARIZATION_TEAM_ID: ${{ secrets.APPLE_NOTARIZATION_TEAM_ID }}
+        APPLE_NOTARIZATION_PASSWORD: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
+        APPLE_CODESIGNING_PASSWORD: ${{ secrets.APPLE_CODESIGNING_PASSWORD }}
+        APPLE_CODESIGNING_CERTIFICATE: ${{ secrets.APPLE_CODESIGNING_CERTIFICATE }}
+        APPLE_CODESIGNING_ID: ${{ secrets.APPLE_CODESIGNING_ID }}
+      run: ./scripts/macos_codesign.sh
     - name: Package as DMG file
       run: dmgbuild -s dmgbuild_settings.py DistanceEstimation dist/DistanceEstimation.dmg
     - name: Upload artifacts
@@ -71,7 +83,7 @@ jobs:
         asset_content_type: application/octet-stream
   build_macos_arm64:
     needs: release
-    runs-on: macos-13-large
+    runs-on: macos-15
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v5
@@ -83,6 +95,15 @@ jobs:
       run: pyinstaller main.spec
     - name: Test CLI
       run: ./dist/DistanceEstimation.app/Contents/MacOS/DistanceEstimation --cli --help
+    - name: Sign
+      env:
+        APPLE_NOTARIZATION_USER_ID: ${{ secrets.APPLE_NOTARIZATION_USER_ID }}
+        APPLE_NOTARIZATION_TEAM_ID: ${{ secrets.APPLE_NOTARIZATION_TEAM_ID }}
+        APPLE_NOTARIZATION_PASSWORD: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
+        APPLE_CODESIGNING_PASSWORD: ${{ secrets.APPLE_CODESIGNING_PASSWORD }}
+        APPLE_CODESIGNING_CERTIFICATE: ${{ secrets.APPLE_CODESIGNING_CERTIFICATE }}
+        APPLE_CODESIGNING_ID: ${{ secrets.APPLE_CODESIGNING_ID }}
+      run: ./scripts/macos_codesign.sh
     - name: Package as DMG file
       run: dmgbuild -s dmgbuild_settings.py DistanceEstimation dist/DistanceEstimation.dmg
     - name: Upload artifacts

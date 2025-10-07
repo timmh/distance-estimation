@@ -4,6 +4,8 @@ import os
 import pkg_resources
 import platform
 
+version = os.getenv('GITHUB_REF_NAME', 'v0.0.0')[1:]
+
 onnxruntime_capi_path = pkg_resources.resource_filename('onnxruntime', 'capi')
 
 block_cipher = None
@@ -90,5 +92,13 @@ else:
         name='DistanceEstimation.app',
         icon='assets/icon.png',
         bundle_identifier='xyz.haucke.distance_estimation',
-        version=os.getenv('GITHUB_REF_NAME', 'v0.0.0')[1:]
+        version=version,
+        info_plist={
+            'CFBundleName': 'Distance Estimation',
+            'CFBundleDisplayName': 'Distance Estimation',
+            'CFBundleVersion': version,
+            'CFBundleShortVersionString': version,
+            'NSRequiresAquaSystemAppearance': 'No',
+            'NSHighResolutionCapable': 'True',
+        },
     )
