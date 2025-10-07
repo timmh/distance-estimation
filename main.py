@@ -10,6 +10,19 @@ from copy import deepcopy
 import multiprocessing
 from tqdm import tqdm
 import toga
+import certifi
+import ssl
+import urllib.request
+
+
+# Ensure urllib (and downstream HTTP libraries) trust the certifi CA bundle when running from a packaged app.
+_CERTIFI_CAFILE = certifi.where()
+os.environ.setdefault("SSL_CERT_FILE", _CERTIFI_CAFILE)
+os.environ.setdefault("REQUESTS_CA_BUNDLE", _CERTIFI_CAFILE)
+_ssl_context = ssl.create_default_context(cafile=_CERTIFI_CAFILE)
+urllib.request.install_opener(
+    urllib.request.build_opener(urllib.request.HTTPSHandler(context=_ssl_context))
+)
 
 from config import Config
 from utils import is_standalone, exception_to_str, EnumActionLowerCase, dirs
