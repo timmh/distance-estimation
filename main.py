@@ -171,7 +171,7 @@ def build(app: toga.App):
         nonlocal terminate_run, last_status_update
         try:
             yield sleep_duration
-            for status_update in run(*args, **kwargs):
+            for status_update in run(*args, **kwargs, gui=True):
                 if terminate_run:
                     break
                 if status_update is not None:
@@ -231,7 +231,7 @@ def cli(args):
     last_total = None
     last_idx = 0
     with tqdm() as progressbar:
-        for status_update in run(config):
+        for status_update in run(config, gui=False):
             if status_update is not None:
                 if last_total != status_update.total_transects:
                     last_total = status_update.total_transects

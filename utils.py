@@ -412,3 +412,10 @@ def condition_disparity(disp, eps=1e-6):
     disp = disp / np.std(disp)
     disp = np.clip(disp, eps, np.inf)
     return disp
+
+
+def imread(path, *args, **kwargs):
+    img = cv2.imread(path, *args, **kwargs)
+    if img is None:
+        raise RuntimeError(f"Failed to read image from path '{path}'")
+    return img

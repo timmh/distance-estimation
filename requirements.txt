@@ -6,6 +6,7 @@ opencv-python>=4.0.0
 pyinstaller==6.16.0
 scikit-learn==1.7.2
 toga==0.5.2
+desktop-notifier==6.2.0
 tqdm==4.67.1
 platformdirs==4.4.0
 timm==1.0.20
