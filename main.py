@@ -9,7 +9,6 @@ import os
 from copy import deepcopy
 import multiprocessing
 from tqdm import tqdm
-import toga
 import certifi
 import ssl
 import urllib.request
@@ -24,12 +23,45 @@ urllib.request.install_opener(
     urllib.request.build_opener(urllib.request.HTTPSHandler(context=_ssl_context))
 )
 
+import toga
+
 from config import Config
 from utils import is_standalone, exception_to_str, EnumActionLowerCase, dirs
 
 
 def var_to_label(var: str):
     return " ".join(w[0].upper() + w[1:] for w in var.lower().split("_"))
+
+
+def _ensure_gtk_display_initialized():
+    if not sys.platform.startswith("linux"):
+        return
+
+    try:
+        import gi
+    except ImportError:
+        return
+
+    gtk_version = "4.0" if os.getenv("TOGA_GTK") == "4" else "3.0"
+    try:
+        gi.require_version("Gtk", gtk_version)
+        gi.require_version("Gdk", gtk_version)
+        from gi.repository import Gdk, Gtk
+    except (ImportError, ValueError):
+        return
+    try:
+        Gtk.init([])
+    except TypeError:
+        Gtk.init()
+
+    if gtk_version < "4.0":
+        default_display = Gdk.Screen.get_default()
+    else:
+        default_display = Gdk.Display.get_default()
+    if default_display is None:
+        raise RuntimeError(
+            "Cannot identify an active display. Is the `DISPLAY` environment variable set correctly?"
+        )
 
 
 def build_config_inputs(config, container, on_config_change):
@@ -284,6 +316,8 @@ def main():
             sys.stdout = open(os.devnull, "w")
         if sys.stderr is None:
             sys.stderr = open(os.devnull, "w")
+
+        _ensure_gtk_display_initialized()
 
         if is_standalone():
             icon = os.path.join(sys._MEIPASS, "assets", "icon.png")
