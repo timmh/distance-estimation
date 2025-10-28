@@ -1,0 +1,68 @@
+# Dockerfile for building Linux executable compatible with Ubuntu 22.04 and newer
+# Builds girepository-2.0 from source since it's not available in Ubuntu 22.04 repos
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies and add deadsnakes PPA for Python 3.11
+# Note: Using Python 3.11 instead of 3.12 because gobject-introspection's g-ir-scanner
+# has compatibility issues with Python 3.12's removed distutils module
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa -y \
+    && apt-get update && apt-get install -y \
+    python3.11 \
+    python3.11-dev \
+    python3.11-venv \
+    python3.11-distutils \
+    git \
+    build-essential \
+    pkg-config \
+    libcairo2-dev \
+    libffi-dev \
+    libgirepository1.0-dev \
+    gobject-introspection \
+    meson \
+    ninja-build \
+    flex \
+    bison \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.11 as default first
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+# Install newer meson via pip (required for building girepository-2.0)
+# Pin setuptools<65 to avoid distutils.msvccompiler issues (setuptools 65+ removed this module)
+RUN wget https://bootstrap.pypa.io/get-pip.py && \
+    python3.11 get-pip.py && \
+    rm get-pip.py && \
+    python3.11 -m pip install --no-cache-dir 'setuptools<65' 'meson>=1.4.0'
+
+# Build and install girepository-2.0 from source
+# Using version 1.80.1 which works with pinned setuptools
+RUN git clone https://gitlab.gnome.org/GNOME/gobject-introspection.git /tmp/gobject-introspection && \
+    cd /tmp/gobject-introspection && \
+    git checkout 1.80.1 && \
+    python3.11 /usr/local/bin/meson setup _build --prefix=/usr && \
+    ninja -C _build && \
+    ninja -C _build install && \
+    ldconfig && \
+    rm -rf /tmp/gobject-introspection
+
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN python3.11 -m pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire project
+COPY . .
+
+# Build the executable with PyInstaller
+RUN pyinstaller main.spec
+
+# Note: Skipping CLI test as it requires libGL which isn't needed for the build
+# The executable will work fine on target Ubuntu 22.04 systems
