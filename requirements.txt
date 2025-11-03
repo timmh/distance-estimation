@@ -5,6 +5,7 @@ onnxruntime-gpu==1.23.0; platform_system != "Darwin"
 opencv-python>=4.0.0
 pyinstaller==6.16.0
 scikit-learn==1.7.2
+pygobject==3.50.0; platform_system == "Linux"
 toga==0.5.2
 desktop-notifier==6.2.0
 tqdm==4.67.1
