@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
     - name: Create Release
       id: create_release
@@ -21,23 +21,21 @@ jobs:
         prerelease: false
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
-  build_linux:
+  build_linux_x64:
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v2
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    - name: Build Linux executable in Docker (Ubuntu 22.04 for GLIBC compatibility)
+    - name: Build Linux executable in Docker
       run: |
         docker build --platform linux/amd64 -f Dockerfile.ubuntu22 -t distance-estimation-builder .
+    - name: Extract artifact from Docker image
+      run: |
         docker create --name builder distance-estimation-builder
         docker cp builder:/app/dist/DistanceEstimation ./DistanceEstimation
         docker rm builder
-    # - name: Test CLI
-    #   run: |
-    #     chmod +x ./DistanceEstimation
-    #     docker run --platform linux/amd64 --rm -v $(pwd)/DistanceEstimation:/app/DistanceEstimation ubuntu:22.04 /app/DistanceEstimation --cli --help
     - name: Upload artifacts
       uses: actions/upload-release-asset@v1
       env:
@@ -46,6 +44,30 @@ jobs:
         upload_url: ${{ needs.release.outputs.upload_url }}
         asset_path: ./DistanceEstimation
         asset_name: DistanceEstimation_linux_x64
+        asset_content_type: application/x-executable
+  build_linux_arm64:
+    needs: release
+    runs-on: ubuntu-24.04-arm
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Build Linux executable in Docker
+      run: |
+        docker build --platform linux/arm64 -f Dockerfile.ubuntu22 -t distance-estimation-builder .
+    - name: Extract artifact from Docker image
+      run: |
+        docker create --name builder distance-estimation-builder
+        docker cp builder:/app/dist/DistanceEstimation ./DistanceEstimation
+        docker rm builder
+    - name: Upload artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./DistanceEstimation
+        asset_name: DistanceEstimation_linux_arm64
         asset_content_type: application/x-executable
   build_macos_x64:
     needs: release
@@ -115,7 +137,7 @@ jobs:
         asset_path: ./dist/DistanceEstimation.dmg
         asset_name: DistanceEstimation_mac_arm64.dmg
         asset_content_type: application/octet-stream
-  build_windows:
+  build_windows_x64:
     needs: release
     runs-on: windows-2022
     steps:
@@ -138,3 +160,27 @@ jobs:
         asset_path: ./dist/DistanceEstimation.exe
         asset_name: DistanceEstimation_win_x64.exe
         asset_content_type: application/vnd.microsoft.portable-executable
+  # # TODO: disabled until there are compatible numpy wheels for arm64 Windows
+  # build_windows_arm64:
+  #   needs: release
+  #   runs-on: windows-11-arm
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: actions/setup-python@v5
+  #     with:
+  #       python-version: '3.12'
+  #   - name: Install requirements
+  #     run: pip install -r requirements.txt
+  #   - name: Run PyInstaller
+  #     run: pyinstaller main.spec
+  #   - name: Test CLI
+  #     run: .\dist\DistanceEstimation.exe --cli --help
+  #   - name: Upload artifacts
+  #     uses: actions/upload-release-asset@v1
+  #     env:
+  #       GITHUB_TOKEN: ${{ github.token }}
+  #     with:
+  #       upload_url: ${{ needs.release.outputs.upload_url }}
+  #       asset_path: ./dist/DistanceEstimation.exe
+  #       asset_name: DistanceEstimation_win_arm64.exe
+  #       asset_content_type: application/vnd.microsoft.portable-executable

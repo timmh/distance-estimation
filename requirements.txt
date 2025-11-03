@@ -1,7 +1,7 @@
 matplotlib==3.10.6
 numpy<2.0.0
 onnxruntime==1.23.0
-onnxruntime-gpu==1.23.0; platform_system != "Darwin"
+onnxruntime-gpu==1.23.0; platform_system != "Darwin" and platform_machine not in "aarch64, arm64"
 opencv-python>=4.0.0
 pyinstaller==6.16.0
 scikit-learn==1.7.2
@@ -13,5 +13,5 @@ platformdirs==4.4.0
 timm==1.0.20
 dmgbuild==1.6.5; platform_system == "Darwin"
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.0+cpu; platform_system == "Linux"
-torch==2.2.0; platform_system != "Linux"
+torch==2.2.0+cpu; platform_system == "Linux" and platform_machine not in "aarch64, arm64"
+torch==2.2.0; platform_system != "Linux" or platform_machine in "aarch64, arm64"
