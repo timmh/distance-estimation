@@ -67,7 +67,7 @@ def visualize_farthest_calibration_frame_impl(data_dir, transect_id, farthest_ca
     )
 
 
-def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, masks, world_positions, sample_locations, draw_detection_ids, draw_world_position, min_depth, max_depth):
+def visualize_detection_impl(data_dir, transect_id, detection_id, detection_frame, calibrated_depth_midas, farthest_calibration_frame_disp, boxes, masks, world_positions, sample_locations, draw_detection_ids, draw_world_position, min_depth, max_depth):
     import matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.patches
@@ -147,7 +147,7 @@ def visualize_detection_impl(data_dir, detection_id, detection_frame, calibrated
 
     os.makedirs(os.path.join(data_dir, "results", "sampling"), exist_ok=True)
     plt.savefig(
-        os.path.join(data_dir, "results", "sampling", detection_id + ".pdf"),
+        os.path.join(data_dir, "results", "sampling", transect_id + "_" + detection_id + ".pdf"),
         bbox_inches="tight",
         dpi=300,
         transparent=True,
