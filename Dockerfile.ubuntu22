@@ -56,6 +56,7 @@ WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
+RUN python3.11 -m pip install "setuptools<82"
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt
 
 # Copy the entire project

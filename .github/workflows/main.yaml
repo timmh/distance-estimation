@@ -78,7 +78,7 @@ jobs:
       with:
         python-version: '3.12'
     - name: Install requirements
-      run: pip install -r requirements.txt
+      run: pip install "setuptools<82" && pip install -r requirements.txt
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
@@ -112,7 +112,7 @@ jobs:
       with:
         python-version: '3.12'
     - name: Install requirements
-      run: pip install -r requirements.txt
+      run: pip install "setuptools<82" && pip install -r requirements.txt
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
@@ -146,7 +146,7 @@ jobs:
       with:
         python-version: '3.12'
     - name: Install requirements
-      run: pip install -r requirements.txt
+      run: pip install "setuptools<82" && pip install -r requirements.txt
     - name: Run PyInstaller
       run: pyinstaller main.spec
     - name: Test CLI
@@ -170,7 +170,7 @@ jobs:
   #     with:
   #       python-version: '3.12'
   #   - name: Install requirements
-  #     run: pip install -r requirements.txt
+  #     run: pip install "setuptools<82" && pip install -r requirements.txt
   #   - name: Run PyInstaller
   #     run: pyinstaller main.spec
   #   - name: Test CLI
