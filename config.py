@@ -1,6 +1,20 @@
 from dataclasses import dataclass, field
+from collections import OrderedDict
+from enum import Enum
 from typing import List
 from custom_types import DetectionSamplingMethod, SampleFrom, MultipleAnimalReduction, RegressionMethod, DepthEstimationModel
+
+
+def config_to_json_obj(config):
+    obj = OrderedDict()
+    for var in dir(config):
+        if var.startswith("_"):
+            continue
+        value = getattr(config, var)
+        if isinstance(value, Enum):
+            value = value.name
+        obj[var] = value
+    return obj
 
 
 @dataclass

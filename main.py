@@ -1,6 +1,5 @@
 import sys
 from argparse import ArgumentParser
-from collections import OrderedDict
 import json
 import logging
 from decimal import Decimal
@@ -25,7 +24,7 @@ urllib.request.install_opener(
 
 import toga
 
-from config import Config
+from config import Config, config_to_json_obj
 from utils import is_standalone, exception_to_str, EnumActionLowerCase, dirs
 
 
@@ -119,17 +118,9 @@ def build(app: toga.App):
     )
 
     def persist_config(config, config_path):
-        obj = OrderedDict()
-        for var in dir(config):
-            if var.startswith("_"):
-                continue
-            value = getattr(config, var)
-            if issubclass(type(value), Enum):
-                value = value.name
-            obj[var] = value
         try:
             with open(config_path, "w") as f:
-                json.dump(obj, f)
+                json.dump(config_to_json_obj(config), f, indent=4)
         except Exception as e:
             logging.info(f"Unable to persist config: {str(e)}")
 

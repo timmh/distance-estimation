@@ -1,6 +1,7 @@
 from typing import Optional
 from collections import OrderedDict
 from dataclasses import dataclass
+import json
 import logging
 import os
 import glob
@@ -8,7 +9,7 @@ import math
 import csv
 import numpy as np
 import cv2
-from config import Config
+from config import Config, config_to_json_obj
 from dpt import DPT
 from dpt_pytorch import DPTPyTorch
 from depth_anything import DepthAnything
@@ -38,6 +39,9 @@ def run(config: Config, gui=False):
     assert os.path.isdir(os.path.join(config.data_dir, "transects")) and os.path.isdir(os.path.join(config.data_dir, "results")), "Data dir must contain 'transect' and 'results' subdirectories. Please consult the manual for the correct directory structure."
     assert len(glob.glob(os.path.join(config.data_dir, "transects", "*/"))), "The 'transect' subdirectory must contain at least one transect. Please consult the manual for the correct directory structure."
     # assert config.depth_estimation_model != DepthEstimationModel.METRIC_3D_V2_VIT_S or config.calibrate_metric == True
+
+    with open(os.path.join(config.data_dir, "results", "config.json"), "w") as config_file:
+        json.dump(config_to_json_obj(config), config_file, indent=4)
 
     yield
 
