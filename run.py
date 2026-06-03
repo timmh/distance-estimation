@@ -315,6 +315,37 @@ def run(config: Config, gui=False):
                                 round(sample_location[1][0] + box[0]),
                             )
                             sample_locations += [sample_location]
+                        elif config.detection_sampling_method == DetectionSamplingMethod.BBOX_INTERPOLATED:
+                            ymin, ymax = max(0, min(depth.shape[0] - 2, round(box[1]))), max(0, min(depth.shape[0] - 1, round(box[3])))
+                            xmin, xmax = max(0, min(depth.shape[1] - 2, round(box[0]))), max(0, min(depth.shape[1] - 1, round(box[2])))
+                            depth_cropped = depth[ymin:ymax, xmin:xmax]
+
+                            percentile_depth = np.percentile(depth_cropped, config.bbox_sampling_percentile, method="nearest")
+                            percentile_sample_location = np.nonzero(depth_cropped == percentile_depth)
+                            percentile_sample_location = (
+                                round(percentile_sample_location[0][0] + box[1]),
+                                round(percentile_sample_location[1][0] + box[0]),
+                            )
+
+                            bottom_sample_location = (
+                                max(0, min(depth.shape[0] - 1, round(box[3]))),
+                                max(0, min(depth.shape[1] - 1, round(box[0] + (box[2] - box[0]) / 2))),
+                            )
+                            bottom_depth = depth[bottom_sample_location]
+
+                            interpolation_min_depth = config.bbox_interpolation_min_depth
+                            interpolation_max_depth = config.max_depth
+                            if interpolation_max_depth <= interpolation_min_depth:
+                                interpolation_weight = 0
+                            else:
+                                # Eq. 2 in Henrich et al. blends z20th toward zbottom over the far-distance range.
+                                interpolation_weight = np.clip((percentile_depth - interpolation_min_depth) / (interpolation_max_depth - interpolation_min_depth), 0, 1)
+
+                            sampled_depths += [(1. - interpolation_weight) * percentile_depth + interpolation_weight * bottom_depth]
+                            sample_locations += [(
+                                round((1. - interpolation_weight) * percentile_sample_location[0] + interpolation_weight * bottom_sample_location[0]),
+                                round((1. - interpolation_weight) * percentile_sample_location[1] + interpolation_weight * bottom_sample_location[1]),
+                            )]
                         elif config.detection_sampling_method == DetectionSamplingMethod.SAM:
                             ymin, ymax = max(0, min(depth.shape[0] - 2, round(box[1]))), max(0, min(depth.shape[0] - 1, round(box[3])))
                             xmin, xmax = max(0, min(depth.shape[1] - 2, round(box[0]))), max(0, min(depth.shape[1] - 1, round(box[2])))

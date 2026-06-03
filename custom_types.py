@@ -4,6 +4,7 @@ from enum import Enum, auto
 class DetectionSamplingMethod(Enum):
     BBOX_BOTTOM = auto()
     BBOX_PERCENTILE = auto()
+    BBOX_INTERPOLATED = auto()
     SAM = auto()
 
 
