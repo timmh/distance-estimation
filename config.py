@@ -55,6 +55,7 @@ class Config:
     calibration_regression_method: RegressionMethod = RegressionMethod.RANSAC  # one of RANSAC|LEASTSQUARES|POLY|RANSAC_POLY
     calibration_mask_animals: bool = False  # whether to mask animals during calibration
     calibrate_blur: bool = False  # whether to blur depth images during calibration
+    extrinsic_recalibration: bool = False  # whether to align detection frames to the final calibration frame using an image homography
 
     # sampling_parameters
     detection_sampling_method: DetectionSamplingMethod = DetectionSamplingMethod.BBOX_PERCENTILE  # one of BBOX_BOTTOM|BBOX_PERCENTILE|BBOX_INTERPOLATED|SAM

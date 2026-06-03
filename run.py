@@ -19,6 +19,7 @@ from sam import SAM
 from custom_types import DetectionSamplingMethod, MultipleAnimalReduction, SampleFrom, DepthEstimationModel
 from utils import calibrate, calibrate_v0, piecewise_linear_calibration, crop, resize, exception_to_str, get_calibration_frame_dist, get_extension_agnostic_path, multi_file_extension_glob, blur_and_downsample, imread
 from visualization import visualize_detection, visualize_farthest_calibration_frame
+from extrinsic_recalibration import ExtrinsicRecalibrator, warp_image, warp_depth
 
 
 @dataclass
@@ -71,6 +72,9 @@ def run(config: Config, gui=False):
     if config.detection_sampling_method == DetectionSamplingMethod.SAM:
         sam = SAM()
         yield
+    extrinsic_recalibrator = ExtrinsicRecalibrator() if config.extrinsic_recalibration else None
+    if extrinsic_recalibrator is not None:
+        yield
 
     with open(os.path.join(config.data_dir, "results", "results.csv"), "w", newline="") as result_csv_file, open(os.path.join(config.data_dir, "results", "results.txt"), "w") as result_distance_file: 
         head_row_csv = ["transect_id", "frame_id", "detection_idx", "detection_confidence", "depth", "world_x", "world_y", "world_z", "error_status"]
@@ -82,6 +86,8 @@ def run(config: Config, gui=False):
         transect_dirs = sorted(glob.glob(os.path.join(config.data_dir, "transects", "*/")))
         for transect_idx, transect_dir in enumerate(transect_dirs):
             transect_id = os.path.basename(os.path.normpath(transect_dir))
+            if extrinsic_recalibrator is not None:
+                extrinsic_recalibrator.reset()
 
             yield StatusUpdate(transect_id, transect_idx, len(transect_dirs))
 
@@ -90,6 +96,7 @@ def run(config: Config, gui=False):
                 calibration_frames = {}
                 farthest_calibration_frame_disp = None  # inverse depth map
                 farthest_calibration_frame_disp_raw = None  # raw model output (aligned target)
+                farthest_calibration_frame_img = None  # baseline image for extrinsic recalibration
                 calibration_map = None
 
                 if config.depth_estimation_model != DepthEstimationModel.DEPTH_AHYTHING_METRIC:
@@ -123,7 +130,7 @@ def run(config: Config, gui=False):
                             )
                             disp = depth_estimation_model(img)
                             disp = np.ma.masked_where(mask, disp)
-                            calibration_frames[dist] = disp
+                            calibration_frames[dist] = (disp, img)
 
                     yield
 
@@ -131,12 +138,15 @@ def run(config: Config, gui=False):
                     calibration_frames = OrderedDict(sorted(calibration_frames.items(), key=lambda kv: kv[0]))
 
                     # get disparity of the farthest calibration frame
-                    farthest_calibration_frame_disp_raw = list(calibration_frames.values())[-1] if len(calibration_frames) > 0 else None
+                    if len(calibration_frames) > 0:
+                        farthest_calibration_frame_disp_raw, farthest_calibration_frame_img = list(calibration_frames.values())[-1]
+                    else:
+                        farthest_calibration_frame_disp_raw, farthest_calibration_frame_img = None, None
 
                     try:
                         x, y = [], []
                         calibrated_frames = {}
-                        for dist, disp in calibration_frames.items():
+                        for dist, (disp, _) in calibration_frames.items():
                             yield
                             disp = resize(disp, farthest_calibration_frame_disp_raw.shape)
                             if config.calibrate_metric:
@@ -165,6 +175,7 @@ def run(config: Config, gui=False):
                         calibration_map = None
                         farthest_calibration_frame_disp = None
                         farthest_calibration_frame_disp_raw = None
+                        farthest_calibration_frame_img = None
                         if not os.path.exists(os.path.join(transect_dir, "detection_frames_depth")):
                             logging.warn(f"Failed calibrating transect '{transect_id}' due to exception: {exception_to_str(e)}. Skipping all distance estimations for observations in this transect.")
 
@@ -206,6 +217,22 @@ def run(config: Config, gui=False):
                     )
                     if farthest_calibration_frame_disp is not None:
                         img = resize(img, farthest_calibration_frame_disp.shape)
+
+                    homography_estimate = None
+                    if extrinsic_recalibrator is not None and farthest_calibration_frame_img is not None:
+                        baseline_img = resize(farthest_calibration_frame_img, img.shape[0:2])
+                        homography_estimate = extrinsic_recalibrator.estimate(baseline_img, img)
+                        if homography_estimate is not None:
+                            img = warp_image(img, homography_estimate.homography, baseline_img.shape[0:2])
+                            logging.info(
+                                f"Applied extrinsic recalibration to detection '{detection_id}' in transect '{transect_id}' "
+                                f"(matches={homography_estimate.num_matches}, inliers={homography_estimate.num_inliers}, "
+                                f"inlier_ratio={homography_estimate.inlier_ratio:.2f}, "
+                                f"reprojection_error={homography_estimate.reprojection_error:.2f}, "
+                                f"reused_previous={homography_estimate.reused_previous})"
+                            )
+                        else:
+                            logging.info(f"Skipped extrinsic recalibration for detection '{detection_id}' in transect '{transect_id}' due to insufficient match quality")
 
                     yield
 
@@ -262,6 +289,13 @@ def run(config: Config, gui=False):
                         elif precomputed_depth_filename is not None:
                             assert config.sample_from == SampleFrom.DETECTION, "Config must be set to sample from detection if using precomputed depth maps"
                             depth = imread(precomputed_depth_filename, cv2.IMREAD_UNCHANGED)
+                            if homography_estimate is not None:
+                                depth = crop(
+                                    depth,
+                                    config.crop_top, config.crop_bottom, config.crop_left, config.crop_right,
+                                )
+                                depth = resize(depth, img.shape[0:2])
+                                depth = warp_depth(depth, homography_estimate.homography, img.shape[0:2])
                             disp = np.clip(depth, config.min_depth, config.max_depth) ** -1
                         elif precomputed_depth_filename is None and farthest_calibration_frame_disp is not None:
                             if config.sample_from == SampleFrom.DETECTION:

@@ -433,7 +433,8 @@ class DownloadableWeights:
                 assert md5sum is None or md5sum_from_filepath(filepath) == md5sum
                 return filepath
         except Exception as e:
-            os.unlink(filepath)
+            if os.path.exists(filepath):
+                os.unlink(filepath)
             raise RuntimeError(f"Failed retrieving weight '{filename}'. Please try again. Full exception: {e}")
             raise e
 
