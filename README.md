@@ -57,7 +57,7 @@ issn = {1574-9541},
 url = {https://www.sciencedirect.com/science/article/pii/S1574954121003277}
 }
 ```
-Furthermore, as parts of this software are based on [MegaDetector 5.0](https://github.com/microsoft/CameraTraps/releases/tag/v5.0), [Dense Prediction Transformers](https://github.com/isl-org/DPT), [Segment Anything](https://github.com/facebookresearch/segment-anything), and [Depth Anything](https://github.com/LiheYoung/Depth-Anything) please consider also citing:
+Furthermore, as parts of this software are based on [MegaDetector 5.0](https://github.com/microsoft/CameraTraps/releases/tag/v5.0), [Dense Prediction Transformers](https://github.com/isl-org/DPT), [Segment Anything](https://github.com/facebookresearch/segment-anything), [Depth Anything](https://github.com/LiheYoung/Depth-Anything), and [LightGlue](https://github.com/cvg/LightGlue) (via [LightGlue ONNX](https://github.com/fabio-sim/LightGlue-ONNX)) please consider also citing:
 ```
 @article{megadetector,
   title={Efficient pipeline for camera trap image review},
@@ -83,5 +83,12 @@ Furthermore, as parts of this software are based on [MegaDetector 5.0](https://g
   author={Yang, Lihe and Kang, Bingyi and Huang, Zilong and Xu, Xiaogang and Feng, Jiashi and Zhao, Hengshuang},
   booktitle={CVPR},
   year={2024}
+}
+@inproceedings{lightglue,
+  title={Lightglue: Local feature matching at light speed},
+  author={Lindenberger, Philipp and Sarlin, Paul-Edouard and Pollefeys, Marc},
+  booktitle={Proceedings of the IEEE/CVF international conference on computer vision},
+  pages={17627--17638},
+  year={2023}
 }
 ```
